@@ -1,0 +1,7 @@
+{
+  "cleanUrls": true,
+  "headers": [
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }] },
+    { "source": "/(index.html|config.js|bk-store.js)?", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
+  ]
+}
