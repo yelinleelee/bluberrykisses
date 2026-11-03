@@ -141,15 +141,16 @@ textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--cream);
 .polaroid span{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:var(--f-display);color:var(--ink-soft)}
 .stk-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
 .stk-wrap .polaroid{transform:none;width:min(290px,100%);padding:12px 12px 48px;box-sizing:border-box}
-.stk-stage{position:relative;overflow:hidden;border-radius:2px;touch-action:none;user-select:none;-webkit-user-select:none}
+.stk-stage{position:relative;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+.polaroid.decoed{padding:0!important;background:none}.polaroid.decoed img{border-radius:6px}
 .stk-stage img{display:block;width:100%;pointer-events:none}
 .stk{position:absolute;left:0;top:0;transform-origin:center;touch-action:none;cursor:grab}
 .stk svg{display:block;width:100%;height:100%;pointer-events:none}
 .stk.sel{outline:2px dashed #4E5DB5;outline-offset:2px;border-radius:6px}
 .stk-del{position:absolute;right:-12px;top:-12px;width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:#FF6F91;color:#fff;font-size:18px;line-height:18px;padding:0;display:none}
 .stk.sel .stk-del{display:block}
-.stk-tray{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:min(300px,100%)}
-.stk-tray button{border:none;background:var(--cream);border-radius:12px;padding:6px;aspect-ratio:1}
+.stk-tray{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;width:min(310px,100%)}
+.stk-tray button{border:none;background:var(--cream);border-radius:9px;padding:4px;aspect-ratio:1}
 .stk-tray svg{width:100%;height:100%;display:block}
 .stk-help{margin:0;font-size:19px;color:var(--ink-soft);text-align:center}
 .photo-view .pill-btn,.stk-wrap .pill-btn{font-size:23px;padding:11px 18px}
@@ -473,7 +474,7 @@ body,button,input,textarea{line-height:1.05}
 (()=>{
 "use strict";
 const $=s=>document.querySelector(s);
-const W=480,H=849,CS=1.2,ZOOM=1.1;
+const W=480,H=849,CS=1.2,ZOOM=1.15;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- seeded random ---------- */
@@ -971,7 +972,7 @@ async function loadPhotos(){if(shared&&uid){try{const q=await db.collection('dat
   try{const a=JSON.parse(localStorage.getItem(PHOTO_LS)||'[]');if(Array.isArray(a))myPhotos=a.filter(v=>v&&typeof v.url==='string'&&v.url.startsWith('data:image/')).slice(0,12)}catch(e){}}
 async function savePhotoToDevice(ph,btn){const dl=window.claude&&typeof window.claude.use==='function'?await window.claude.use('downloads'):null;
   if(!dl){toast('사진을 길게 눌러 저장해주세요');return}
-  try{const blob=await (await fetch(ph.url)).blob();const d=new Date(ph.at);await dl.save({filename:`bluberrykisses-${d.getMonth()+1}${String(d.getDate()).padStart(2,'0')}-${d.getHours()}${String(d.getMinutes()).padStart(2,'0')}.jpg`,data:blob});toast('사진을 저장했어요')}
+  try{const blob=await (await fetch(ph.deco||ph.url)).blob();const d=new Date(ph.at);await dl.save({filename:`bluberrykisses-${d.getMonth()+1}${String(d.getDate()).padStart(2,'0')}-${d.getHours()}${String(d.getMinutes()).padStart(2,'0')}.jpg`,data:blob});toast('사진을 저장했어요')}
   catch(e){const c=e&&e.code;if(c==='declined')return;if(c==='rate_limited'){toast('잠시 후 다시 눌러주세요');return}toast('여기서는 저장할 수 없어요. 사진을 길게 눌러 저장해주세요')}}
 /* ---------- polaroid stickers ---------- */
 const STK_O='#2A1F5C';
@@ -985,42 +986,60 @@ const STICKERS={
   ring:`<circle cx="32" cy="40" r="16" fill="none" stroke="${STK_O}" stroke-width="9"/><circle cx="32" cy="40" r="16" fill="none" stroke="#FFD23F" stroke-width="4.5"/><path d="M24 14h16l5 6-13 10-13-10z" fill="#BDE7FF" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/>`,
   cheers:`<g stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"><path d="M10 12h16l-2 16a6 6 0 0 1-12 0z" fill="#FFE38A" transform="rotate(-14 18 30)"/><path d="M38 12h16l-2 16a6 6 0 0 1-12 0z" fill="#FFE38A" transform="rotate(14 46 30)"/></g><path d="M16 34l-2 18M48 34l2 18M8 54h12M44 54h12" stroke="${STK_O}" stroke-width="3.5" stroke-linecap="round"/><path d="M32 4v8M24 8l3 5M40 8l-3 5" stroke="#FF6F91" stroke-width="3" stroke-linecap="round"/>`,
   cake:`<rect x="10" y="30" width="44" height="22" rx="5" fill="#7FA6FF" stroke="${STK_O}" stroke-width="4"/><path d="M10 38q5.5 5 11 0t11 0 11 0 11 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><rect x="29" y="14" width="6" height="16" rx="2" fill="#fff" stroke="${STK_O}" stroke-width="3"/><path d="M32 4q5 6 0 9-5-3 0-9z" fill="#FFD23F" stroke="${STK_O}" stroke-width="2.5"/>`,
-  kiss:`<path d="M10 32c6-10 14-12 22-6 8-6 16-4 22 6-6 10-14 14-22 14S16 42 10 32z" fill="#FF5A7A" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><path d="M12 32q20 6 40 0" fill="none" stroke="${STK_O}" stroke-width="3" stroke-linecap="round"/>`
+  kiss:`<path d="M10 32c6-10 14-12 22-6 8-6 16-4 22 6-6 10-14 14-22 14S16 42 10 32z" fill="#FF5A7A" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><path d="M12 32q20 6 40 0" fill="none" stroke="${STK_O}" stroke-width="3" stroke-linecap="round"/>`,
+  sun:`<g stroke="${STK_O}" stroke-width="3.5" stroke-linecap="round">${[0,1,2,3,4,5,6,7].map(i=>{const a=i/8*Math.PI*2;return `<path d="M${32+Math.cos(a)*20} ${32+Math.sin(a)*20}L${32+Math.cos(a)*28} ${32+Math.sin(a)*28}"/>`}).join('')}</g><circle cx="32" cy="32" r="14" fill="#FFD23F" stroke="${STK_O}" stroke-width="4"/>`,
+  cloud:`<path d="M16 46a10 10 0 0 1 0-20 14 14 0 0 1 26-6 11 11 0 0 1 8 26z" fill="#FFFFFF" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/>`,
+  rainbow:`<path d="M6 46a26 26 0 0 1 52 0" fill="none" stroke="${STK_O}" stroke-width="20" stroke-linecap="round"/><path d="M6 46a26 26 0 0 1 52 0" fill="none" stroke="#FF8FAB" stroke-width="13" stroke-linecap="round"/><path d="M13 46a19 19 0 0 1 38 0" fill="none" stroke="#FFD23F" stroke-width="6"/><path d="M19 46a13 13 0 0 1 26 0" fill="none" stroke="#7CC8FF" stroke-width="6"/>`,
+  note:`<path d="M24 46V14l26-6v32" fill="none" stroke="${STK_O}" stroke-width="4.5" stroke-linejoin="round"/><ellipse cx="18" cy="47" rx="8" ry="6" fill="#B07CFF" stroke="${STK_O}" stroke-width="4"/><ellipse cx="44" cy="41" rx="8" ry="6" fill="#B07CFF" stroke="${STK_O}" stroke-width="4"/>`,
+  letter:`<rect x="8" y="16" width="48" height="34" rx="4" fill="#FFF6E2" stroke="${STK_O}" stroke-width="4"/><path d="M8 18l24 18 24-18" fill="none" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><path d="M32 40c-4-3-6-4.6-6-6.6a3 3 0 0 1 6-1 3 3 0 0 1 6 1c0 2-2 3.6-6 6.6z" fill="#FF6F91"/>`,
+  butterfly:`<path d="M32 30C24 10 6 12 10 26c2 8 12 8 22 6zM32 30c8-20 26-18 22-4-2 8-12 8-22 6z" fill="#7CC8FF" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/><path d="M32 32c-8 4-14 14-8 18 4 2 8-6 8-14zM32 32c8 4 14 14 8 18-4 2-8-6-8-14z" fill="#FFB3C7" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/><rect x="30" y="22" width="4" height="26" rx="2" fill="${STK_O}"/>`,
+  clover:`<g fill="#5FCB7A" stroke="${STK_O}" stroke-width="3.5">${[0,1,2,3].map(i=>{const a=i/4*Math.PI*2+Math.PI/4;return `<circle cx="${32+Math.cos(a)*11}" cy="${28+Math.sin(a)*11}" r="10"/>`}).join('')}</g><path d="M32 30q2 14 10 24" fill="none" stroke="${STK_O}" stroke-width="3.5" stroke-linecap="round"/>`,
+  smile:`<circle cx="32" cy="32" r="24" fill="#FFD23F" stroke="${STK_O}" stroke-width="4"/><circle cx="24" cy="28" r="3.5" fill="${STK_O}"/><circle cx="40" cy="28" r="3.5" fill="${STK_O}"/><path d="M22 38q10 10 20 0" fill="none" stroke="${STK_O}" stroke-width="4" stroke-linecap="round"/><circle cx="18" cy="37" r="4" fill="#FF8FAB" opacity=".7"/><circle cx="46" cy="37" r="4" fill="#FF8FAB" opacity=".7"/>`,
+  crown:`<path d="M8 22l12 10 12-16 12 16 12-10-5 26H13z" fill="#FFD23F" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="38" r="4" fill="#FF6F91" stroke="${STK_O}" stroke-width="2.5"/>`,
+  balloon:`<path d="M32 6c11 0 18 8 18 18 0 12-10 20-18 22-8-2-18-10-18-22 0-10 7-18 18-18z" fill="#FF6F91" stroke="${STK_O}" stroke-width="4"/><path d="M29 46h6l-3 4z" fill="#FF6F91" stroke="${STK_O}" stroke-width="2.5" stroke-linejoin="round"/><path d="M32 50q-6 6 0 12" fill="none" stroke="${STK_O}" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="25" cy="18" rx="4" ry="6" fill="#fff" opacity=".55"/>`,
+  gift:`<rect x="10" y="26" width="44" height="28" rx="3" fill="#7CC8FF" stroke="${STK_O}" stroke-width="4"/><rect x="7" y="18" width="50" height="10" rx="3" fill="#9FD8FF" stroke="${STK_O}" stroke-width="4"/><path d="M32 18v36" stroke="#FF6F91" stroke-width="7"/><path d="M32 18c-6-10-16-8-12-2 2 3 8 3 12 2zM32 18c6-10 16-8 12-2-2 3-8 3-12 2z" fill="#FF6F91" stroke="${STK_O}" stroke-width="3" stroke-linejoin="round"/>`,
+  moon:`<path d="M40 8a24 24 0 1 0 16 38A20 20 0 0 1 40 8z" fill="#FFE38A" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><circle cx="24" cy="40" r="3" fill="#F2C94C"/>`,
+  dove:`<path d="M10 36c8 2 14-2 18-8 4-6 10-10 16-8l10-4-4 8c2 10-6 22-22 22-8 0-14-4-18-10z" fill="#FFFFFF" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/><path d="M30 34c-2-8-10-14-18-12 4 8 10 12 18 12z" fill="#E6EBF5" stroke="${STK_O}" stroke-width="3" stroke-linejoin="round"/><circle cx="46" cy="21" r="1.8" fill="${STK_O}"/>`,
+  camera:`<path d="M20 18l3-5h18l3 5h8a4 4 0 0 1 4 4v24a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4z" fill="#FFC83D" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="34" r="10" fill="#fff" stroke="${STK_O}" stroke-width="4"/><circle cx="32" cy="34" r="4.5" fill="#4E5DB5"/>`
 };
 const stkSvg=k=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${STICKERS[k]}</svg>`;
 function openStickers(ph){const wrap=document.createElement('div');wrap.className='stk-wrap';
-  const pol=document.createElement('div');pol.className='polaroid';const stage=document.createElement('div');stage.className='stk-stage';
-  const im=document.createElement('img');im.src=ph.url;im.alt='꾸밀 사진';stage.appendChild(im);pol.appendChild(stage);wrap.appendChild(pol);
-  
+  const stage=document.createElement('div');stage.className='polaroid stk-stage';
+  const im=document.createElement('img');im.src=ph.url;im.alt='꾸밀 사진';stage.appendChild(im);wrap.appendChild(stage);
   const tray=document.createElement('div');tray.className='stk-tray';wrap.appendChild(tray);
   const items=[];let sel=null;
   const place=it=>{const W=stage.clientWidth,sz=it.s*W;it.el.style.width=it.el.style.height=sz+'px';it.el.style.transform=`translate(${it.x*W-sz/2}px,${it.y*stage.clientHeight-sz/2}px) rotate(${it.r}deg)`};
   const select=it=>{sel=it;for(const o of items)o.el.classList.toggle('sel',o===it)};
-  function add(k){const el=document.createElement('div');el.className='stk';el.innerHTML=stkSvg(k);const del=document.createElement('button');del.className='stk-del';del.type='button';del.textContent='×';del.setAttribute('aria-label','스티커 지우기');el.appendChild(del);
-    const it={k,el,x:.5+(Math.random()-.5)*.3,y:.5+(Math.random()-.5)*.3,s:.24,r:Math.round((Math.random()-.5)*24)};items.push(it);stage.appendChild(el);place(it);select(it);
+  function add(k,init){const el=document.createElement('div');el.className='stk';el.innerHTML=stkSvg(k);const del=document.createElement('button');del.className='stk-del';del.type='button';del.textContent='×';del.setAttribute('aria-label','스티커 지우기');el.appendChild(del);
+    const it=Object.assign({k,el,x:.5+(Math.random()-.5)*.4,y:.45+(Math.random()-.5)*.4,s:.2,r:Math.round((Math.random()-.5)*24)},init||{});it.el=el;items.push(it);stage.appendChild(el);place(it);if(!init)select(it);
     del.addEventListener('pointerdown',e=>e.stopPropagation());del.addEventListener('click',e=>{e.stopPropagation();el.remove();items.splice(items.indexOf(it),1);sel=null});
     const pts=new Map();let start=null;
     el.addEventListener('pointerdown',e=>{e.preventDefault();select(it);el.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)}});
     el.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId)||!start)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});const W=stage.clientWidth,H=stage.clientHeight;
       if(pts.size===1&&start.pts.size===1){const p0=[...start.pts.values()][0],p=[...pts.values()][0];it.x=Math.max(0,Math.min(1,start.x+(p.x-p0.x)/W));it.y=Math.max(0,Math.min(1,start.y+(p.y-p0.y)/H))}
-      else if(pts.size>=2){if(start.pts.size<2)start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)};const [a0,b0]=[...start.pts.values()],[a,b]=[...pts.values()];const d0=Math.hypot(a0.x-b0.x,a0.y-b0.y)||1,d=Math.hypot(a.x-b.x,a.y-b.y);it.s=Math.max(.1,Math.min(.7,start.s*d/d0))}
+      else if(pts.size>=2){if(start.pts.size<2)start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)};const [a0,b0]=[...start.pts.values()],[a,b]=[...pts.values()];const d0=Math.hypot(a0.x-b0.x,a0.y-b0.y)||1,d=Math.hypot(a.x-b.x,a.y-b.y);it.s=Math.max(.08,Math.min(.6,start.s*d/d0))}
       place(it)});
     const end=e=>{pts.delete(e.pointerId);start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)}};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
-    el.addEventListener('wheel',e=>{e.preventDefault();it.s=Math.max(.1,Math.min(.7,it.s*(e.deltaY<0?1.08:.92)));place(it)},{passive:false})}
+    el.addEventListener('wheel',e=>{e.preventDefault();it.s=Math.max(.08,Math.min(.6,it.s*(e.deltaY<0?1.08:.92)));place(it)},{passive:false})}
   for(const k of Object.keys(STICKERS)){const b=document.createElement('button');b.type='button';b.innerHTML=stkSvg(k);b.setAttribute('aria-label','스티커');b.addEventListener('click',()=>add(k));tray.appendChild(b)}
-  stage.addEventListener('pointerdown',e=>{if(e.target===stage)select(null)});
+  stage.addEventListener('pointerdown',e=>{if(e.target===stage||e.target===im)select(null)});
   const row=document.createElement('div');row.className='draw-btns center';const ok=document.createElement('button');ok.className='pill-btn';ok.textContent='다 꾸몄어요';
   const cancel=document.createElement('button');cancel.className='pill-btn soft';cancel.textContent='취소';cancel.addEventListener('click',()=>openPhoto(ph));row.append(cancel,ok);wrap.appendChild(row);
-  ok.addEventListener('click',async()=>{if(!items.length){openPhoto(ph);return}ok.disabled=true;
-    try{const base=await loadImg(ph.url);const cw=base.naturalWidth,ch=base.naturalHeight;const c=document.createElement('canvas');c.width=cw;c.height=ch;const q=c.getContext('2d');q.drawImage(base,0,0);
-      for(const it of items){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k)));const sz=it.s*cw;q.save();q.translate(it.x*cw,it.y*ch);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
-      ph.url=c.toDataURL('image/jpeg',.88);await storePhoto(ph);openPhoto(ph,'완성!')}catch(e){ok.disabled=false;toast('저장하지 못했어요. 다시 눌러주세요')}});
-  openModal('스티커 꾸미기',wrap)}
+  ok.addEventListener('click',async()=>{ok.disabled=true;
+    try{ph.stickers=items.map(({k,x,y,s,r})=>({k,x:+x.toFixed(4),y:+y.toFixed(4),s:+s.toFixed(4),r}));
+      ph.deco=ph.stickers.length?await renderPolaroid(ph):'';await storePhoto(ph);openPhoto(ph,'완성!')}catch(e){ok.disabled=false;toast('저장하지 못했어요. 다시 눌러주세요')}});
+  openModal('스티커 꾸미기',wrap);
+  requestAnimationFrame(()=>{for(const s of (ph.stickers||[]))if(STICKERS[s.k])add(s.k,{x:s.x,y:s.y,s:s.s,r:s.r})})}
+/* polaroid card drawn to an image: same proportions as the on-screen editor */
+async function renderPolaroid(ph){const base=await loadImg(ph.url);const W=720,pad=Math.round(W*12/290),pw=W-pad*2,phh=Math.round(pw*base.naturalHeight/base.naturalWidth),bot=Math.round(W*48/290),H=pad+phh+bot;
+  const c=document.createElement('canvas');c.width=W;c.height=H;const q=c.getContext('2d');q.fillStyle='#FFFFFF';q.fillRect(0,0,W,H);q.drawImage(base,pad,pad,pw,phh);
+  for(const it of ph.stickers){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k)));const sz=it.s*W;q.save();q.translate(it.x*W,it.y*H);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
+  return c.toDataURL('image/jpeg',.9)}
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 async function storePhoto(ph){if(shared&&uid){try{await db.collection('data/users/'+uid).doc('photo-'+ph.at).set(ph);return}catch(e){}}
   try{localStorage.setItem(PHOTO_LS,JSON.stringify(myPhotos))}catch(e){}}
 function openPhoto(ph,title){const body=document.createElement('div');body.className='photo-view';const pol=document.createElement('div');pol.className='polaroid';
-  const im=document.createElement('img');im.src=ph.url;im.alt='포토존에서 찍은 내 캐릭터 사진';pol.append(im);body.appendChild(pol);
+  const im=document.createElement('img');im.src=ph.deco||ph.url;im.alt='마을에서 찍은 내 캐릭터 사진';if(ph.deco)pol.classList.add('decoed');pol.append(im);body.appendChild(pol);
   const row=document.createElement('div');row.className='draw-btns center';const sv=document.createElement('button');sv.className='pill-btn';sv.textContent='폰에 저장';sv.addEventListener('click',()=>savePhotoToDevice(ph,sv));
   const st=document.createElement('button');st.className='pill-btn soft';st.textContent='스티커 꾸미기';st.addEventListener('click',()=>openStickers(ph));
   const al=document.createElement('button');al.className='pill-btn soft';al.textContent='앨범';al.addEventListener('click',openAlbum);row.append(sv,st,al);body.appendChild(row);openModal(title||'사진',body)}
@@ -1117,8 +1136,8 @@ function openGuests(){const b=document.createElement('div');const ul=document.cr
   if(demoOn){const n=document.createElement('p');n.className='note';n.textContent='예시 하객은 마을이 비어 보이지 않게 넣어둔 캐릭터예요. 실제 하객이 3명 이상 들어오면 사라져요.';b.appendChild(n)}
   openModal(`마을 하객 ${guestList().length}명`,b)}
 function openAlbum(){const b=document.createElement('div');const g=document.createElement('div');g.className='pol-grid';
-  for(const ph of myPhotos){const p=document.createElement('button');p.className='polaroid';p.setAttribute('aria-label','사진 크게 보기');const im=document.createElement('img');im.src=ph.url;im.alt='포토존 사진';
-    const d=new Date(ph.at);const s2=document.createElement('span');s2.textContent=`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;p.append(im,s2);p.addEventListener('click',()=>openPhoto(ph));g.appendChild(p)}
+  for(const ph of myPhotos){const p=document.createElement('button');p.className='polaroid';p.setAttribute('aria-label','사진 크게 보기');const im=document.createElement('img');im.src=ph.deco||ph.url;im.alt='마을 사진';
+    const d=new Date(ph.at);const s2=document.createElement('span');s2.textContent=`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;if(ph.deco){p.classList.add('decoed');p.append(im)}else p.append(im,s2);p.addEventListener('click',()=>openPhoto(ph));g.appendChild(p)}
   if(!myPhotos.length){const e=document.createElement('div');e.className='pol-empty';e.textContent='카메라 버튼을 누르면 내 캐릭터 주변이 찍혀요';g.appendChild(e)}
   b.appendChild(g);openModal('사진 앨범',b)}
 function drawCandidates(){const arr=[...others.values()].filter(o=>o.entered&&(!shared||!o.demo||demoOn)).map(o=>({id:o.id,name:o.name,look:o.look,enteredAt:o.enteredAt}));if(me&&me.entered)arr.push({id:shared?uid:'me',name:me.name,look:me.look,enteredAt:me.enteredAt});return arr}
