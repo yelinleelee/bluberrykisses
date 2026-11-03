@@ -893,7 +893,7 @@ function render(t){const c=ctx;c.setTransform(dpr*scale,0,0,dpr*scale,-camX*dpr*
     case'npc':drawCharO(c,d.p.x,d.p.y,d.p.look,{t,seed:d.p.x,s:CS});break;
     case'guest':drawCharO(c,d.o.x,d.o.y,d.o.look,{t,dir:d.o.dir,phase:d.o.phase,moving:d.o.moving,seed:d.o.seed,s:CS});break;
     case'me':drawCharO(c,player.x,player.y,me.look,{t,dir:player.dir,phase:player.phase,moving:player.moving,s:CS});break}}
-  if(inVillage&&me){if(!me.stamps.book)marker(c,SPOTS.book.mark.x,SPOTS.book.mark.y,t);if(!me.cake)marker(c,SPOTS.cake.mark.x,SPOTS.cake.mark.y,t);}
+  if(inVillage&&me&&!photoMode){if(!me.stamps.book)marker(c,SPOTS.book.mark.x,SPOTS.book.mark.y,t);if(!me.cake)marker(c,SPOTS.cake.mark.x,SPOTS.cake.mark.y,t);}
   for(const b of bubbles){const o=b.who;if(o===player)bubble(c,player.x,player.y,b.text);else if(others.has(o.id)||couple.includes(o))bubble(c,o.x,o.y,b.text)}
   for(const p of couple)nameTag(c,p.x,p.y,p.name,false,false,true);
   for(const o of others.values())if(o.y>top&&o.y<bot)nameTag(c,o.x,o.y,o.name,false,o.demo);
@@ -958,10 +958,11 @@ function grant(k){if(!me||me.stamps[k])return;me.stamps[k]=true;stampFx(QUESTS.f
   persist(patch);refreshPanels()}
 function stampFx(label){const el=$('#stampFx');el.innerHTML=berrySvg(128)+'<p></p>';el.querySelector('p').textContent=label+' 도장 쾅!';el.hidden=false;
   clearTimeout(stampFx.t);stampFx.t=setTimeout(()=>el.hidden=true,1500)}
+let photoMode=false;
 function takePhoto(){player.dir='down';player.moving=false;player.path=[];player.action=null;
   setTimeout(()=>{const f=$('#flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');
     const PW=290,PH=272,sw=PW*scale*dpr,sh=PH*scale*dpr;const sx=Math.max(0,Math.min(cv.width-sw,(player.x-PW/2-camX)*scale*dpr)),sy=Math.max(0,Math.min(cv.height-sh,(player.y-PH+84-camY)*scale*dpr));
-    const p=document.createElement('canvas');p.width=480;p.height=449;const q=p.getContext('2d');try{q.drawImage(cv,sx,sy,sw,sh,0,0,480,449)}catch(e){}
+    const p=document.createElement('canvas');p.width=480;p.height=449;const q=p.getContext('2d');photoMode=true;try{render(performance.now()/1000);q.drawImage(cv,sx,sy,sw,sh,0,0,480,449)}catch(e){}photoMode=false;
         let url='';try{url=p.toDataURL('image/jpeg',.85)}catch(e){}
     if(url)addPhoto(url);
     setTimeout(()=>{if(url)openPhoto(myPhotos[0],'찰칵!')},450)},140)}
@@ -972,7 +973,7 @@ async function loadPhotos(){if(shared&&uid){try{const q=await db.collection('dat
   try{const a=JSON.parse(localStorage.getItem(PHOTO_LS)||'[]');if(Array.isArray(a))myPhotos=a.filter(v=>v&&typeof v.url==='string'&&v.url.startsWith('data:image/')).slice(0,12)}catch(e){}}
 async function savePhotoToDevice(ph,btn){const dl=window.claude&&typeof window.claude.use==='function'?await window.claude.use('downloads'):null;
   if(!dl){toast('사진을 길게 눌러 저장해주세요');return}
-  try{const blob=await (await fetch(ph.deco||ph.url)).blob();const d=new Date(ph.at);await dl.save({filename:`bluberrykisses-${d.getMonth()+1}${String(d.getDate()).padStart(2,'0')}-${d.getHours()}${String(d.getMinutes()).padStart(2,'0')}.jpg`,data:blob});toast('사진을 저장했어요')}
+  try{const card=ph.deco||await renderPolaroid(ph);const blob=await (await fetch(card)).blob();const d=new Date(ph.at);await dl.save({filename:`bluberrykisses-${d.getMonth()+1}${String(d.getDate()).padStart(2,'0')}-${d.getHours()}${String(d.getMinutes()).padStart(2,'0')}.jpg`,data:blob});toast('사진을 저장했어요')}
   catch(e){const c=e&&e.code;if(c==='declined')return;if(c==='rate_limited'){toast('잠시 후 다시 눌러주세요');return}toast('여기서는 저장할 수 없어요. 사진을 길게 눌러 저장해주세요')}}
 /* ---------- polaroid stickers ---------- */
 const STK_O='#2A1F5C';
@@ -1033,13 +1034,13 @@ function openStickers(ph){const wrap=document.createElement('div');wrap.classNam
 /* polaroid card drawn to an image: same proportions as the on-screen editor */
 async function renderPolaroid(ph){const base=await loadImg(ph.url);const W=720,pad=Math.round(W*12/290),pw=W-pad*2,phh=Math.round(pw*base.naturalHeight/base.naturalWidth),bot=Math.round(W*48/290),H=pad+phh+bot;
   const c=document.createElement('canvas');c.width=W;c.height=H;const q=c.getContext('2d');q.fillStyle='#FFFFFF';q.fillRect(0,0,W,H);q.drawImage(base,pad,pad,pw,phh);
-  for(const it of ph.stickers){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k)));const sz=it.s*W;q.save();q.translate(it.x*W,it.y*H);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
+  for(const it of (ph.stickers||[])){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k)));const sz=it.s*W;q.save();q.translate(it.x*W,it.y*H);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
   return c.toDataURL('image/jpeg',.9)}
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 async function storePhoto(ph){if(shared&&uid){try{await db.collection('data/users/'+uid).doc('photo-'+ph.at).set(ph);return}catch(e){}}
   try{localStorage.setItem(PHOTO_LS,JSON.stringify(myPhotos))}catch(e){}}
 function openPhoto(ph,title){const body=document.createElement('div');body.className='photo-view';const pol=document.createElement('div');pol.className='polaroid';
-  const im=document.createElement('img');im.src=ph.deco||ph.url;im.alt='마을에서 찍은 내 캐릭터 사진';if(ph.deco)pol.classList.add('decoed');pol.append(im);body.appendChild(pol);
+  const im=document.createElement('img');im.src=ph.deco||ph.url;im.alt='마을에서 찍은 내 캐릭터 사진';if(ph.deco)pol.classList.add('decoed');else renderPolaroid(ph).then(u=>{if(im.isConnected){im.src=u;pol.classList.add('decoed')}}).catch(()=>{});pol.append(im);body.appendChild(pol);
   const row=document.createElement('div');row.className='draw-btns center';const sv=document.createElement('button');sv.className='pill-btn';sv.textContent='폰에 저장';sv.addEventListener('click',()=>savePhotoToDevice(ph,sv));
   const st=document.createElement('button');st.className='pill-btn soft';st.textContent='스티커 꾸미기';st.addEventListener('click',()=>openStickers(ph));
   const al=document.createElement('button');al.className='pill-btn soft';al.textContent='앨범';al.addEventListener('click',openAlbum);row.append(sv,st,al);body.appendChild(row);openModal(title||'사진',body)}
