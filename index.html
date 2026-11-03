@@ -272,7 +272,8 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .rp-title{margin:0;font-family:var(--f-display);font-size:26px;color:#fff;text-shadow:0 2px 0 rgba(40,30,80,.5)}
 
 .host-login{display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center}
-.host-login input{text-align:center;font-size:24px}
+.host-login input{text-align:center;font-size:26px;border-radius:999px;border:2px solid var(--stamp-line,#E4DCCB);background:var(--cream,#FFF8EC);padding:12px 18px;outline:none;letter-spacing:.2em;box-sizing:border-box;width:100%}
+.host-login input:focus{border-color:var(--berry)}
 .host-err{color:#E2405B;min-height:1.2em}
 
 /* creator */
@@ -324,6 +325,7 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .wl-card .name-field input{border:none;background:#fff;box-shadow:0 4px 0 var(--berry-dk)}
 .wl-card .pill-btn{background:#fff;color:var(--berry);box-shadow:0 4px 0 var(--berry-dk)}
 .wl-card .pill-btn:disabled{opacity:.55}
+.wl-host{border:none;background:none;color:rgba(255,255,255,.72);font:inherit;font-size:18px;text-decoration:underline;text-underline-offset:3px;padding:6px 10px;margin-top:-4px;cursor:pointer}
 #nameField{display:none!important}
 /* loading + draw */
 #loading{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--berry);transition:opacity .45s}
@@ -466,6 +468,7 @@ body,button,input,textarea{line-height:1.05}
     <label class="name-field" id="wlField"><input type="text" id="wlName" maxlength="10" placeholder="이름" aria-label="이름" autocomplete="off" enterkeyhint="next"></label>
     <button class="pill-btn" type="submit" id="wlGo" disabled>다음</button>
   </form>
+  <button type="button" class="wl-host" id="wlHost">호스트입니다</button>
 </div></section>
 
 <div id="loading"><div class="load-card">
@@ -1246,7 +1249,7 @@ function openHost(){if(!canHost())return;hostOpen=true;$('#host').hidden=false;r
 $('#hostBtn').addEventListener('click',openHost);
 $('#camBtn').addEventListener('click',()=>{if(inVillage&&$('#modal').hidden&&$('#talk').hidden)takePhoto()});
 $('#albumBtn').addEventListener('click',()=>{if(inVillage)openAlbum()});
-$('#hostClose').addEventListener('click',()=>{hostOpen=false;$('#host').hidden=true});
+$('#hostClose').addEventListener('click',()=>{hostOpen=false;$('#host').hidden=true;if(!inVillage&&$('#creator').hidden)$('#welcome').hidden=false});
 let drawN=1;
 $('#drawN').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;drawN=+b.dataset.n;$('#drawN').querySelectorAll('button').forEach(x=>x.setAttribute('aria-checked',String(x===b)))});
 $('#hostDraw').addEventListener('click',()=>runDraw(drawN,$('#drawExclude').checked));
@@ -1361,11 +1364,13 @@ async function boot(){setTimeout(()=>loadPhotos(),0);try{const v=getComputedStyl
   refreshPanels()}
 /* ---------- host sign-in (open the site with #host at the end of the link) ---------- */
 function openHostLogin(){const b=document.createElement('form');b.className='host-login';
-  b.innerHTML='<p class="note">신랑신부만 아는 호스트 비밀번호를 넣어주세요.</p><input type="password" id="hostPw" autocomplete="current-password" aria-label="호스트 비밀번호" placeholder="비밀번호"><button class="pill-btn" type="submit">호스트로 들어가기</button><p class="note host-err" aria-live="polite"></p>';
+  b.innerHTML='<p class="note">신랑신부만 아는 호스트 비밀번호를 넣어주세요.</p><input type="password" id="hostPw" autocomplete="current-password" aria-label="호스트 비밀번호"><button class="pill-btn" type="submit">호스트로 들어가기</button><p class="note host-err" aria-live="polite"></p>';
   b.addEventListener('submit',async e=>{e.preventDefault();const pw=b.querySelector('#hostPw').value;if(!pw)return;const btn=b.querySelector('button');btn.disabled=true;
-    const r=await BK.claimHost(pw);btn.disabled=false;if(r.ok){closeModal();toast('호스트로 들어왔어요');history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>location.reload(),700)}else b.querySelector('.host-err').textContent=r.msg});
+    const r=await BK.claimHost(pw);btn.disabled=false;if(r.ok){closeModal();toast('호스트로 들어왔어요');if(!inVillage)try{sessionStorage.setItem('bkOpenHost','1')}catch(e){}history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>location.reload(),700)}else b.querySelector('.host-err').textContent=r.msg});
   openModal('호스트 로그인',b);setTimeout(()=>{const i=document.getElementById('hostPw');i&&i.focus()},60)}
-boot().then(()=>{if(location.hash==='#host'&&window.BK&&BK.enabled&&!isOwner){if(inVillage)setTimeout(openHostLogin,900);else afterEnter=openHostLogin}});
+$('#wlHost').addEventListener('click',()=>{if(typeof canHost==='function'&&canHost()){$('#welcome').hidden=true;openHost();return}if(!(window.BK&&BK.enabled)){toast('연결 중이에요. 잠시 후 다시 눌러주세요');return}openHostLogin()});
+boot().then(()=>{let oh=null;try{oh=sessionStorage.getItem('bkOpenHost');sessionStorage.removeItem('bkOpenHost')}catch(e){}if(oh&&!inVillage&&canHost()){$('#welcome').hidden=true;openHost()}
+  if(location.hash==='#host'&&window.BK&&BK.enabled&&!isOwner){if(inVillage)setTimeout(openHostLogin,900);else afterEnter=openHostLogin}});
 })();
 </script>
 </body>
