@@ -505,7 +505,7 @@ function detour(pts,from){const out=[];let prev=from;for(const p of pts){const k
   out.push(p);prev=p}return out}
 
 const SPOTS={
-  greet:{x:240,y:430,r:44,stand:{x:240,y:484},mark:{x:240,y:364}},
+  greet:{x:240,y:430,r:44,stand:{x:304,y:450},mark:{x:240,y:364}},
   book:{x:89,y:362,r:36,stand:{x:104,y:404},mark:{x:89,y:316}},
   cake:{x:240,y:934,r:62,stand:{x:240,y:984},mark:{x:240,y:846}},
   photo:{x:238,y:600,r:36,stand:{x:238,y:644},mark:{x:238,y:548}}
@@ -874,9 +874,10 @@ function update(dt,t,ts){
   if(inVillage){const arrived=stepMover(player,dt,150);
     if(arrived&&player.action){const a=player.action;player.action=null;player.dir=a==='photo'?'down':'up';doAction(a)}}
   for(const o of others.values()){if(o.moving||o.path.length)continue;let fx=0,fy=0;
+    if(inCZ(o.x,o.y)){const dl=o.x-CZ.x0,dr=CZ.x1-o.x,dd=CZ.y1-o.y,m=Math.min(dl,dr,dd),st=40*dt;if(m===dd)o.y=Math.min(CZ.y1+1,o.y+st);else if(m===dl)o.x-=st;else o.x+=st;continue}
     const push=(qx,qy)=>{const dx=o.x-qx,dy=o.y-qy,d=(dx/SEP_X)**2+(dy/SEP_Y)**2;if(d<1){const l=Math.hypot(dx,dy)||1,w=1-d;fx+=(dx||(Math.random()-.5))/l*w;fy+=(dy||(Math.random()-.5))/l*w*.5}};
     for(const q of others.values())if(q!==o)push(q.x,q.y);for(const c of couple)push(c.x,c.y);if(inVillage)push(player.x,player.y);
-    if(fx||fy){const n=clampTier({x:o.x+fx*dt*36,y:o.y+fy*dt*36},tierOf(o.y));if(!blocked(n.x,n.y)){o.x=n.x;o.y=n.y}}}
+    if(fx||fy){const n=clampTier({x:o.x+fx*dt*36,y:o.y+fy*dt*36},tierOf(o.y));if(!blocked(n.x,n.y)&&!inCZ(n.x,n.y)){o.x=n.x;o.y=n.y}}}
   for(const o of others.values()){stepMover(o,dt,o.demo?60:110);
     if(o.demo&&ts>o.wanderAt&&!o.path.length){const t2=tierOf(o.y),T=TIERS[t2];o.path=route(o,{x:R(T.x0,T.x1),y:R(T.y0,T.y1)});o.wanderAt=ts+R(4000,9000)}}
   if(inVillage&&performance.now()-lastDragAt>2200){const tgt=clampCam(player.y-viewH*.56);camY+=(tgt-camY)*Math.min(1,dt*4)}
@@ -958,9 +959,11 @@ const SEP_X=26*CS,SEP_Y=13*CS;
 function crowdAt(x,y,self){let n=0;const chk=(qx,qy)=>{const d=((x-qx)/SEP_X)**2+((y-qy)/SEP_Y)**2;if(d<1)n+=1-d};
   for(const o of others.values()){if(o===self)continue;chk(o.tx!=null&&!o.path.length?o.x:(o.tx??o.x),o.tx!=null&&!o.path.length?o.y:(o.ty??o.y))}
   for(const c of couple)chk(c.x,c.y);if(self!==player&&inVillage)chk(player.x,player.y);return n}
-function freeSpot(p,self){const t=tierOf(p.y);if(crowdAt(p.x,p.y,self)===0)return p;let best=p,bv=crowdAt(p.x,p.y,self);
+/* keep the space right in front of the couple clear so nobody hides them */
+const CZ={x0:184,x1:296,y0:436,y1:528};const inCZ=(x,y)=>x>CZ.x0&&x<CZ.x1&&y>CZ.y0&&y<CZ.y1;
+function freeSpot(p,self){const t=tierOf(p.y);if(!inCZ(p.x,p.y)&&crowdAt(p.x,p.y,self)===0)return p;let best=p,bv=inCZ(p.x,p.y)?1e9:crowdAt(p.x,p.y,self);
   for(let ring=1;ring<=7;ring++)for(let k=0;k<ring*8;k++){const a=k/(ring*8)*Math.PI*2,q=clampTier({x:p.x+Math.cos(a)*ring*SEP_X*.55,y:p.y+Math.sin(a)*ring*SEP_Y*.55},t);
-    if(blocked(q.x,q.y))continue;const v=crowdAt(q.x,q.y,self);if(v===0)return q;if(v<bv){bv=v;best=q}}return best}
+    if(blocked(q.x,q.y)||inCZ(q.x,q.y))continue;const v=crowdAt(q.x,q.y,self);if(v===0)return q;if(v<bv){bv=v;best=q}}return best}
 function goTo(p,action){if(blocked(p.x,p.y)){const b=BLOCKS.find(b=>p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1);p={x:p.x,y:p.y<(b.y0+b.y1)/2?b.y0-2:b.y1+4}}p=freeSpot(clampTier(p,tierOf(p.y)),player);player.path=route(player,p);player.action=action;const last=player.path[player.path.length-1];tapFx={x:last.x,y:last.y,at:performance.now()};
   if(!action&&!player.path.length)player.moving=false}
 let hintTimer;function hideHint(){$('#hint').style.opacity=0}
