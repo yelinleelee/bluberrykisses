@@ -990,7 +990,7 @@ const stkSvg=k=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${S
 function openStickers(ph){const wrap=document.createElement('div');wrap.className='stk-wrap';
   const pol=document.createElement('div');pol.className='polaroid';const stage=document.createElement('div');stage.className='stk-stage';
   const im=document.createElement('img');im.src=ph.url;im.alt='꾸밀 사진';stage.appendChild(im);pol.appendChild(stage);wrap.appendChild(pol);
-  const help=document.createElement('p');help.className='stk-help';help.textContent='스티커를 눌러 붙이고, 끌어서 옮기고, 두 손가락으로 크기를 바꿔요';wrap.appendChild(help);
+  
   const tray=document.createElement('div');tray.className='stk-tray';wrap.appendChild(tray);
   const items=[];let sel=null;
   const place=it=>{const W=stage.clientWidth,sz=it.s*W;it.el.style.width=it.el.style.height=sz+'px';it.el.style.transform=`translate(${it.x*W-sz/2}px,${it.y*stage.clientHeight-sz/2}px) rotate(${it.r}deg)`};
