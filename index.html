@@ -149,9 +149,11 @@ textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--cream);
 .stk.sel{outline:2px dashed #4E5DB5;outline-offset:2px;border-radius:6px}
 .stk-del{position:absolute;right:-12px;top:-12px;width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:#FF6F91;color:#fff;font-size:18px;line-height:18px;padding:0;display:none}
 .stk.sel .stk-del{display:block}
-.stk-tray{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;width:min(310px,100%)}
-.stk-tray button{border:none;background:var(--cream);border-radius:9px;padding:4px;aspect-ratio:1}
-.stk-tray svg{width:100%;height:100%;display:block}
+.stk-wrap{width:100%;min-width:0;overflow:hidden}
+.stk-tray{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:5px;width:min(310px,100%);box-sizing:border-box}
+.stk-tray button{border:none;background:var(--cream);border-radius:9px;padding:4px;aspect-ratio:1/1;min-width:0;width:100%;overflow:hidden;box-sizing:border-box;display:block}
+.stk-tray svg{width:100%;height:100%;display:block;max-width:100%}
+.stk-wrap .draw-btns{margin-top:10px}
 .stk-help{margin:0;font-size:19px;color:var(--ink-soft);text-align:center}
 .photo-view .pill-btn,.stk-wrap .pill-btn{font-size:23px;padding:11px 18px}
 .photo-view{display:flex;flex-direction:column;align-items:center;gap:16px}.photo-view .polaroid{width:min(280px,100%);padding:12px 12px 52px}
@@ -1003,7 +1005,7 @@ const STICKERS={
   dove:`<path d="M10 36c8 2 14-2 18-8 4-6 10-10 16-8l10-4-4 8c2 10-6 22-22 22-8 0-14-4-18-10z" fill="#FFFFFF" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/><path d="M30 34c-2-8-10-14-18-12 4 8 10 12 18 12z" fill="#E6EBF5" stroke="${STK_O}" stroke-width="3" stroke-linejoin="round"/><circle cx="46" cy="21" r="1.8" fill="${STK_O}"/>`,
   camera:`<path d="M20 18l3-5h18l3 5h8a4 4 0 0 1 4 4v24a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4z" fill="#FFC83D" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><circle cx="32" cy="34" r="10" fill="#fff" stroke="${STK_O}" stroke-width="4"/><circle cx="32" cy="34" r="4.5" fill="#4E5DB5"/>`
 };
-const stkSvg=k=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${STICKERS[k]}</svg>`;
+const stkSvg=(k,img)=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" ${img?'width="256" height="256"':'width="100%" height="100%"'}>${STICKERS[k]}</svg>`;
 function openStickers(ph){const wrap=document.createElement('div');wrap.className='stk-wrap';
   const stage=document.createElement('div');stage.className='polaroid stk-stage';
   const im=document.createElement('img');im.src=ph.url;im.alt='꾸밀 사진';stage.appendChild(im);wrap.appendChild(stage);
@@ -1034,7 +1036,7 @@ function openStickers(ph){const wrap=document.createElement('div');wrap.classNam
 /* polaroid card drawn to an image: same proportions as the on-screen editor */
 async function renderPolaroid(ph){const base=await loadImg(ph.url);const W=720,pad=Math.round(W*12/290),pw=W-pad*2,phh=Math.round(pw*base.naturalHeight/base.naturalWidth),bot=Math.round(W*48/290),H=pad+phh+bot;
   const c=document.createElement('canvas');c.width=W;c.height=H;const q=c.getContext('2d');q.fillStyle='#FFFFFF';q.fillRect(0,0,W,H);q.drawImage(base,pad,pad,pw,phh);
-  for(const it of (ph.stickers||[])){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k)));const sz=it.s*W;q.save();q.translate(it.x*W,it.y*H);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
+  for(const it of (ph.stickers||[])){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k,true)));const sz=it.s*W;q.save();q.translate(it.x*W,it.y*H);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
   return c.toDataURL('image/jpeg',.9)}
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 async function storePhoto(ph){if(shared&&uid){try{await db.collection('data/users/'+uid).doc('photo-'+ph.at).set(ph);return}catch(e){}}
