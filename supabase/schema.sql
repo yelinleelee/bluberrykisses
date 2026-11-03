@@ -97,6 +97,8 @@ create policy docs_delete on public.docs for delete using (
     or public.is_host()
 );
 
+grant select, insert, update, delete on public.docs to anon, authenticated;
+
 -- Realtime: broadcast row changes to connected guests
 do $$ begin
   alter publication supabase_realtime add table public.docs;
