@@ -879,7 +879,7 @@ function update(dt,t,ts){
     const push=(qx,qy)=>{const dx=o.x-qx,dy=o.y-qy,d=(dx/SEP_X)**2+(dy/SEP_Y)**2;if(d<1){const l=Math.hypot(dx,dy)||1,w=1-d;fx+=(dx||(Math.random()-.5))/l*w;fy+=(dy||(Math.random()-.5))/l*w*.5}};
     for(const q of others.values())if(q!==o)push(q.x,q.y);for(const c of couple)push(c.x,c.y);if(inVillage)push(player.x,player.y);
     if(fx||fy){const n=clampTier({x:o.x+fx*dt*36,y:o.y+fy*dt*36},tierOf(o.y));if(!blocked(n.x,n.y)&&!inCZ(n.x,n.y)){o.x=n.x;o.y=n.y}}}
-  for(const o of others.values()){stepMover(o,dt,o.demo?60:110);
+  for(const o of others.values()){stepMover(o,dt,o.demo?60:145);
     if(o.demo&&ts>o.wanderAt&&!o.path.length){const t2=tierOf(o.y),T=TIERS[t2];o.path=route(o,{x:R(T.x0,T.x1),y:R(T.y0,T.y1)});o.wanderAt=ts+R(4000,9000)}}
   if(inVillage&&performance.now()-lastDragAt>2200){const tgt=clampCam(player.y-viewH*.56);camY+=(tgt-camY)*Math.min(1,dt*4)}
   if(performance.now()-lastDragAt>2200){let tx=Math.min(W/2-viewW/2,50);if(inVillage){const m=48;if(player.x<tx+m)tx=player.x-m;else if(player.x>tx+viewW-m)tx=player.x-viewW+m}tx=clampCamX(tx);camX+=(tx-camX)*Math.min(1,dt*4)}camX=clampCamX(camX);
@@ -965,7 +965,11 @@ const CZ={x0:184,x1:296,y0:436,y1:528};const inCZ=(x,y)=>x>CZ.x0&&x<CZ.x1&&y>CZ.
 function freeSpot(p,self){const t=tierOf(p.y);if(!inCZ(p.x,p.y)&&crowdAt(p.x,p.y,self)===0)return p;let best=p,bv=inCZ(p.x,p.y)?1e9:crowdAt(p.x,p.y,self);
   for(let ring=1;ring<=7;ring++)for(let k=0;k<ring*8;k++){const a=k/(ring*8)*Math.PI*2,q=clampTier({x:p.x+Math.cos(a)*ring*SEP_X*.55,y:p.y+Math.sin(a)*ring*SEP_Y*.55},t);
     if(blocked(q.x,q.y)||inCZ(q.x,q.y))continue;const v=crowdAt(q.x,q.y,self);if(v===0)return q;if(v<bv){bv=v;best=q}}return best}
-function goTo(p,action){if(blocked(p.x,p.y)){const b=BLOCKS.find(b=>p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1);p={x:p.x,y:p.y<(b.y0+b.y1)/2?b.y0-2:b.y1+4}}p=freeSpot(clampTier(p,tierOf(p.y)),player);player.path=route(player,p);player.action=action;const last=player.path[player.path.length-1];tapFx={x:last.x,y:last.y,at:performance.now()};
+/* tell everyone where I'm heading the moment I tap (at most one write per 1.5 s) */
+let moveSentAt=0,moveTimer=null,moveNext=null;
+function sendMove(q){moveNext={x:Math.round(q.x),y:Math.round(q.y)};if(moveTimer)return;const go=()=>{moveTimer=null;if(!moveNext||!inVillage||!me)return;const m=moveNext;moveNext=null;moveSentAt=Date.now();lastSaved={x:m.x,y:m.y};me.x=m.x;me.y=m.y;persist({x:m.x,y:m.y,updatedAt:Date.now()})};
+  const wait=moveSentAt+1500-Date.now();if(wait<=0)go();else moveTimer=setTimeout(go,wait)}
+function goTo(p,action){if(blocked(p.x,p.y)){const b=BLOCKS.find(b=>p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1);p={x:p.x,y:p.y<(b.y0+b.y1)/2?b.y0-2:b.y1+4}}p=freeSpot(clampTier(p,tierOf(p.y)),player);player.path=route(player,p);player.action=action;const last=player.path[player.path.length-1];sendMove(last);tapFx={x:last.x,y:last.y,at:performance.now()};
   if(!action&&!player.path.length)player.moving=false}
 let hintTimer;function hideHint(){$('#hint').style.opacity=0}
 $('#downHint').addEventListener('click',()=>{hideHint();goTo({x:240+R(-60,60),y:R(790,860)})});
