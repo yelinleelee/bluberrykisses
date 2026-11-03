@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>부하 테스트</title>
+<style>
+:root{--ink:#2A2440;--berry:#3F5BFF;--paper:#FFFDF7;--line:#E4DCCB}
+body{margin:0;background:#EEF0FF;color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:22px;margin:0 0 4px}
+p.sub{margin:0 0 16px;color:#5B5670;font-size:14px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+label{display:flex;align-items:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+input[type=number]{width:80px;padding:6px 10px;border:1px solid var(--line);border-radius:10px;font:inherit}
+select{padding:6px 10px;border:1px solid var(--line);border-radius:10px;font:inherit;background:#fff}
+.btns{display:flex;gap:10px;margin-top:12px}
+button{border:none;border-radius:999px;padding:10px 20px;font:inherit;font-weight:700;background:var(--berry);color:#fff;cursor:pointer}
+button.soft{background:#E2E6FF;color:var(--berry)}
+button:disabled{opacity:.45;cursor:default}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:#F4F5FF;border-radius:12px;padding:10px;text-align:center}
+.stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:#5B5670}
+#log{font:12px/1.5 ui-monospace,Menlo,monospace;background:#1E1B2E;color:#D9D6F0;border-radius:12px;padding:10px;height:220px;overflow:auto;white-space:pre-wrap;margin:0}
+.warn{color:#C0392B}
+@media (max-width:420px){.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<main>
+  <h1>가짜 하객 부하 테스트</h1>
+  <p class="sub">이 페이지를 연 컴퓨터에서 가짜 하객들이 실제 서버로 접속해 마을을 걸어 다녀요. 폰으로 게임에 들어가서 끊김이 없는지 보세요. 하객 이름은 "테스트1"처럼 보여요.</p>
+
+  <div class="card">
+    <label>가짜 하객 수 <input type="number" id="n" min="1" max="120" value="40"></label>
+    <label>움직이는 빈도
+      <select id="pace">
+        <option value="calm">보통 (10~25초마다 한 번)</option>
+        <option value="busy" selected>바쁨 (5~12초마다 한 번)</option>
+        <option value="storm">최악 (2~4초마다 한 번)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="listen" checked> 가짜 하객들도 실시간으로 받기 (실제 하객처럼 서버 부담을 같이 줌)</label>
+    <div class="btns"><button id="go">시작</button><button class="soft" id="stop" disabled>멈추기</button></div>
+  </div>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><b id="sOn">0</b><span>접속한 가짜 하객</span></div>
+      <div class="stat"><b id="sW">0</b><span>보내는 양 (초당)</span></div>
+      <div class="stat"><b id="sR">0</b><span>받는 양 (초당)</span></div>
+      <div class="stat"><b id="sLat">-</b><span>전달 지연 (ms)</span></div>
+      <div class="stat"><b id="sErr">0</b><span>오류</span></div>
+      <div class="stat"><b id="sDrop">0</b><span>연결 끊김</span></div>
+    </div>
+  </div>
+
+  <pre id="log"></pre>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s);
+const cfg=window.BK_CONFIG||{};
+const logEl=$('#log');
+function log(t,warn){const line=document.createElement('div');if(warn)line.className='warn';line.textContent=new Date().toLocaleTimeString('ko-KR',{hour12:false})+'  '+t;logEl.appendChild(line);logEl.scrollTop=logEl.scrollHeight;while(logEl.childNodes.length>300)logEl.removeChild(logEl.firstChild)}
+
+/* same option keys the game understands */
+const PAL={skin:['#FFE0C7','#FFC9A0','#F0A774','#D2844F','#94582F'],hair:['#2E1F1A','#7A4423','#C9682A','#FFC83D','#26307E','#FF6F91','#5B7CFF','#F4F1EA'],
+  eye:['#24180F','#2F6BFF','#1FA35B','#8A4A17','#7B4DFF'],cloth:['#3F5BFF','#FF7FA0','#FFFFFF','#2A2440','#FFD23F','#3FD39A','#B07CFF','#FF5A36','#5CC8FF','#E8B66A'],
+  shoe:['#6B3A1C','#2A2440','#FFFFFF','#FF5A36','#3F5BFF']};
+const OPT={hair:['short','bob','long','bun','pony','curly'],eyes:['round','lazy','dot','smile','sleepy'],mouth:['smile','open','cat','o'],
+  top:['tee','shirt','suit','dress','dottee','dotdress'],bottom:['pants','shorts','skirt','overall','long','dotskirt'],
+  shoe:['sneakers','hightop','boots','loafers','maryjane','sandals'],acc:['none','crown','ribbon','beret','glasses','flower','berry','bouquet','catband']};
+const pick=a=>a[Math.floor(Math.random()*a.length)];const R=(a,b)=>a+Math.random()*(b-a);
+const look=()=>({skin:pick(PAL.skin),hair:pick(OPT.hair),hairColor:pick(PAL.hair),eyes:pick(OPT.eyes),eyeColor:pick(PAL.eye),mouth:pick(OPT.mouth),
+  top:pick(OPT.top),topColor:pick(PAL.cloth),bottom:pick(OPT.bottom),bottomColor:pick(PAL.cloth),shoe:pick(OPT.shoe),shoeColor:pick(PAL.shoe),acc:pick(OPT.acc)});
+/* walkable areas of the map, skipping tables and the spot in front of the couple */
+const AREAS=[{y0:150,y1:250,x0:50,x1:430,w:.08},{y0:340,y1:474,x0:40,x1:440,w:.27},{y0:560,y1:646,x0:50,x1:430,w:.12},{y0:760,y1:1190,x0:60,x1:424,w:.5},{y0:1280,y1:1294,x0:60,x1:380,w:.03}];
+const BLOCKS=[{x0:146,x1:334,y0:914,y1:970},{x0:38,x1:122,y0:820,y1:882},{x0:384,x1:472,y0:938,y1:1000},{x0:184,x1:296,y0:436,y1:528}];
+function spot(){for(let k=0;k<30;k++){let r=Math.random(),acc=0,a=AREAS[0];for(const q of AREAS){acc+=q.w;if(r<=acc){a=q;break}}
+  const x=Math.round(R(a.x0,a.x1)),y=Math.round(R(a.y0,a.y1));if(!BLOCKS.some(b=>x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1))return{x,y}}return{x:240,y:800}}
+const CHATS=['축하해요!!','결혼 축하해 💙','케이크 어디 있어요?','사진 찍자~','너무 예쁘다','행복하세요!','짠!','블루베리 최고','여기 광장 넓다','방명록 썼어요'];
+const PACE={calm:[10000,25000],busy:[5000,12000],storm:[2000,4000]};
+
+let bots=[],running=false,writes=0,reads=0,errs=0,drops=0,lat=[];
+function setStat(){ $('#sOn').textContent=bots.filter(b=>b.ready).length; $('#sErr').textContent=errs; $('#sDrop').textContent=drops }
+setInterval(()=>{$('#sW').textContent=writes;$('#sR').textContent=reads;writes=0;reads=0;
+  if(lat.length){lat.sort((a,b)=>a-b);$('#sLat').textContent=Math.round(lat[Math.floor(lat.length/2)])+' / '+Math.round(lat[Math.floor(lat.length*.95)]);lat=[]}setStat()},1000);
+
+async function startBot(i,listen){
+  const sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'bk-bot-'+i},realtime:{params:{eventsPerSecond:50}}});
+  const bot={i,sb,ready:false,timer:null,ch:null,doc:null};bots.push(bot);
+  let {data}=await sb.auth.getSession();let session=data.session;
+  if(!session){const r=await sb.auth.signInAnonymously();if(r.error)throw r.error;session=r.data.session}
+  const uid=session.user.id,path='guests/'+uid;const p=spot();
+  bot.doc={name:'테스트'+(i+1),look:look(),x:p.x,y:p.y,msg:'',stamps:{book:false,film:false,cheers:false},cake:false,entered:false,enteredAt:0,bot:true,updatedAt:Date.now()};
+  const put=async()=>{const t0=performance.now();const {error}=await sb.from('docs').upsert({path,col:'guests',data:bot.doc},{onConflict:'path'});writes++;if(error){errs++;log(`테스트${i+1} 저장 실패: ${error.message}`,true)}return performance.now()-t0};
+  await put();
+  if(listen){bot.ch=sb.channel('lt-'+i).on('postgres_changes',{event:'*',schema:'public',table:'docs',filter:'col=eq.guests'},m=>{reads++;const d=m.new&&m.new.data;if(d&&d.bot&&d.updatedAt)lat.push(Date.now()-d.updatedAt)})
+    .subscribe(st=>{if(st==='CHANNEL_ERROR'||st==='TIMED_OUT'||st==='CLOSED'){if(running){drops++;log(`테스트${i+1} 실시간 연결 ${st}`,true)}}})}
+  bot.ready=true;setStat();
+  const pace=PACE[$('#pace').value]||PACE.busy;
+  const step=async()=>{if(!running)return;const q=spot();bot.doc.x=q.x;bot.doc.y=q.y;bot.doc.updatedAt=Date.now();
+    if(Math.random()<.08)bot.doc.chat={t:pick(CHATS),at:Date.now()};
+    await put();bot.timer=setTimeout(step,R(pace[0],pace[1]))};
+  bot.timer=setTimeout(step,R(500,pace[1]));
+}
+
+$('#go').addEventListener('click',async()=>{
+  if(!cfg.supabaseUrl){log('config.js를 읽지 못했어요',true);return}
+  const n=Math.max(1,Math.min(120,+$('#n').value||40)),listen=$('#listen').checked;running=true;$('#go').disabled=true;$('#stop').disabled=false;
+  log(`가짜 하객 ${n}명 접속 시작 (${$('#pace').selectedOptions[0].textContent}, 실시간 받기 ${listen?'켬':'끔'})`);
+  for(let i=0;i<n&&running;i++){startBot(i,listen).catch(e=>{errs++;log(`테스트${i+1} 접속 실패: ${e.message||e}`,true)});await new Promise(r=>setTimeout(r,150))}
+  log('모두 접속 요청 완료');
+});
+$('#stop').addEventListener('click',async()=>{running=false;$('#stop').disabled=true;
+  for(const b of bots){clearTimeout(b.timer);if(b.ch)try{await b.sb.removeChannel(b.ch)}catch(e){}}
+  bots=[];setStat();$('#go').disabled=false;log('멈췄어요. 가짜 하객 캐릭터는 마을에 서 있는 채로 남아요.')});
+})();
+</script>
+</body>
+</html>

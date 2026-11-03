@@ -779,7 +779,7 @@ function sandEdge(y){return 404+Math.sin(y*.026)*6+Math.sin(y*.071)*3}
 function stairs(g,s){g.fillStyle='#A9875F';rr(g,s.x0-6,s.y0-2,s.x1-s.x0+12,s.y1-s.y0+4,4);g.fill();const n=4,h=(s.y1-s.y0)/n;
   for(let i=0;i<n;i++){const yy=s.y0+i*h;g.fillStyle='#EFE4CC';rr(g,s.x0,yy+1,s.x1-s.x0,h-1.5,3);g.fill();g.fillStyle='#D3C2A1';g.fillRect(s.x0+2,yy+h-4,s.x1-s.x0-4,2.5)}}
 function pave(g,f){g.fillStyle='#E6D3AC';g.strokeStyle='#D4BE92';g.lineWidth=2;f();g.fill();g.stroke()}
-function buildGround(){G=new Image();G.decoding='async';G.src='assets/map.webp'}
+function buildGround(){G=new Image();G.decoding='async';G.src='assets/map.webp?v=2'}
 /* ---------- decor (depth-sorted sprites) ---------- */
 const DECOR=[];
 const CAKE=new Image();CAKE.decoding='async';CAKE.src='assets/cake.webp';
