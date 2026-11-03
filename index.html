@@ -234,6 +234,7 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .chk{display:flex;align-items:center;gap:8px;font-size:22px}.chk input{width:20px;height:20px;accent-color:var(--berry)}
 .draw-btns{display:flex;gap:8px;flex-wrap:wrap}
 #hostSearch{border-radius:10px}
+.gb-edit{flex:none;width:38px;height:38px;border:none;border-radius:12px;background:var(--paper);padding:7px;box-shadow:0 2px 0 var(--line)}.gb-edit svg{display:block;width:100%;height:100%}
 .row .time{font-size:18px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .row.hidden-msg{opacity:.45}
 .mini-btn{border:none;background:var(--berry-soft);color:var(--berry-dk);border-radius:8px;padding:2px 10px;font-family:var(--f-display);font-size:20px;white-space:nowrap}
@@ -920,7 +921,7 @@ function nameTag(c,x,y,name,mine,demo,host){c.font='700 16px '+UI_FONT;const lab
   const col=host?tagColor(name==='진배'?'신랑':'신부'):tagColor(name);c.fillStyle=col;rr(c,x-w/2,y+5,w,16,3.5);c.fill();if(mine){c.strokeStyle='#FFFDF7';c.lineWidth=1.6;c.stroke()}
   c.fillStyle=lum(col)>.62?'#2A2440':'#FFFFFF';c.textAlign='center';c.textBaseline='middle';c.fillText(label,x,y+14)}
 function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const L=[];let cur='';for(const ch of String(text)){if(c.measureText(cur+ch).width>150){L.push(cur);cur=ch;if(L.length===2)break}else cur+=ch}if(L.length<2&&cur)L.push(cur);else if(L.length===2&&cur&&L.join('').length<String(text).length)L[1]=L[1].slice(0,-1)+'…';
-  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=x-w/2,by=y-110-extra;
+  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=Math.max(camX+4,Math.min(camX+viewW-w-4,x-w/2)),by=y-110-extra;
   const bh=24+extra;c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,bh,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+bh-1);c.lineTo(x,by+bh+6);c.lineTo(x+5,by+bh-1);c.closePath();c.fill();
   c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';L.forEach((l,i)=>c.fillText(l,x,by+12.5+i*18))}
 
@@ -1102,11 +1103,16 @@ function row(o,showMsg){const li=document.createElement('li');li.className='row'
 function openGuestbook(){const b=document.createElement('div');const form=document.createElement('form');form.className='gb-form';
   form.innerHTML=`<label for="gbIn" class="note" style="margin:0">신랑신부에게 한마디 (최대 60자)</label><textarea id="gbIn" rows="3" maxlength="60" placeholder="결혼 축하해요! 행복하게 살아요"></textarea><button class="pill-btn" type="submit">${me&&me.msg?'방명록 고치기':'방명록 남기기'}</button>`;
   const ta=form.querySelector('textarea');ta.value=me?me.msg:'';
-  form.addEventListener('submit',e=>{e.preventDefault();const v=ta.value.trim().slice(0,60);if(!v){ta.focus();return}me.msg=v;persist({msg:v,updatedAt:Date.now()});
-    bubbles=bubbles.filter(x=>x.who!==player);bubbles.push({who:player,text:v,until:performance.now()+5000});closeModal();toast('방명록을 남겼어요');grant('book')});
-  b.appendChild(form);const ul=document.createElement('ul');ul.className='list';const arr=guestList().filter(o=>o.msg&&(o.mine||!hiddenMsgs.has(o.id)));
+  form.addEventListener('submit',e=>{e.preventDefault();const v=ta.value.trim().slice(0,60);if(!v){ta.focus();return}const wasMsg=!!me.msg;me.msg=v;persist({msg:v,updatedAt:Date.now()});
+    bubbles=bubbles.filter(x=>x.who!==player);bubbles.push({who:player,text:v,until:performance.now()+5000});closeModal();toast(wasMsg?'방명록을 고쳤어요':'방명록을 남겼어요');grant('book')});
+  const wrote=!!(me&&me.msg);form.hidden=wrote;
+  if(wrote){const cx=document.createElement('button');cx.type='button';cx.className='pill-btn soft';cx.textContent='취소';cx.addEventListener('click',()=>{form.hidden=true;ta.value=me.msg});const r=document.createElement('div');r.className='draw-btns center';const sb=form.querySelector('button[type=submit]');sb.replaceWith(r);r.append(cx,sb)}
+  b.appendChild(form);const ul=document.createElement('ul');ul.className='list';const arr=guestList().filter(o=>o.msg&&(o.mine||!hiddenMsgs.has(o.id))).sort((a,b)=>(b.mine?1:0)-(a.mine?1:0));
   if(!arr.length){const e=document.createElement('li');e.className='empty';e.textContent='아직 방명록이 없어요. 첫 번째로 남겨주세요.';ul.appendChild(e)}
-  for(const o of arr)ul.appendChild(row(o,true));b.appendChild(ul);openModal('방명록',b);setTimeout(()=>ta.focus(),50)}
+  for(const o of arr){const li=row(o,true);if(o.mine){const ed=document.createElement('button');ed.type='button';ed.className='gb-edit';ed.setAttribute('aria-label','내 방명록 고치기');
+      ed.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5z" fill="#FFD23F" stroke="#2A1F5C" stroke-width="2" stroke-linejoin="round"/><path d="M13.5 7l3 3" stroke="#2A1F5C" stroke-width="2"/><path d="M4 20l1-4.5 3.5 3z" fill="#FFB3C7" stroke="#2A1F5C" stroke-width="2" stroke-linejoin="round"/></svg>';
+      ed.addEventListener('click',()=>{form.hidden=false;ta.value=me.msg;b.closest('.sheet')?.scrollTo?.({top:0,behavior:'smooth'});setTimeout(()=>{ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)},60)});li.appendChild(ed)}ul.appendChild(li)}
+  b.appendChild(ul);openModal('방명록',b);if(!wrote)setTimeout(()=>ta.focus(),50)}
 function openGuests(){const b=document.createElement('div');const ul=document.createElement('ul');ul.className='list';for(const o of guestList())ul.appendChild(row(o,false));b.appendChild(ul);
   if(demoOn){const n=document.createElement('p');n.className='note';n.textContent='예시 하객은 마을이 비어 보이지 않게 넣어둔 캐릭터예요. 실제 하객이 3명 이상 들어오면 사라져요.';b.appendChild(n)}
   openModal(`마을 하객 ${guestList().length}명`,b)}
