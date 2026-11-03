@@ -264,7 +264,7 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .tabs{justify-content:space-between}
 .tab[aria-selected=true]{background:var(--berry);color:#fff;box-shadow:0 3px 0 var(--berry-dk)}
 .opt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-height:168px;align-content:start}
-.sw-wrap{height:76px}.sw-wrap.noswatch{visibility:hidden}
+.sw-wrap{height:76px}.sw-wrap.gone{display:none}.sw-wrap.noswatch{visibility:hidden}
 .cr-close{position:fixed;z-index:31;top:calc(env(safe-area-inset-top,0px) + 12px);right:max(12px,env(safe-area-inset-right,0px));background:rgba(255,255,255,.95);box-shadow:0 3px 10px rgba(30,30,80,.2)}
 .opt{border:none;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;font-size:20.2px}
 .opt canvas{width:74px;height:74px;border-radius:14px;background:var(--cream);transition:transform .12s}
@@ -284,6 +284,17 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .cr-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .dim{opacity:.45;pointer-events:none}
 
+/* welcome (name first) */
+#welcome{position:fixed;inset:0;z-index:35;display:grid;place-items:center;background:var(--berry);overflow:auto}
+.wl-card{box-sizing:border-box;width:min(360px,100%);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+  padding:calc(env(safe-area-inset-top,0px) + 24px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 24px) max(16px,env(safe-area-inset-left,0px))}
+.wl-card .load-art{width:120px;height:120px}
+.wl-card h1{font-size:clamp(48px,13vw,60px);line-height:1;color:#fff;text-shadow:0 3px 0 var(--berry-dk)}
+.wl-card form{width:100%;display:flex;flex-direction:column;gap:12px}
+.wl-card .name-field input{border:none;background:#fff;box-shadow:0 4px 0 var(--berry-dk)}
+.wl-card .pill-btn{background:#fff;color:var(--berry);box-shadow:0 4px 0 var(--berry-dk)}
+.wl-card .pill-btn:disabled{opacity:.55}
+#creator.first #nameField{display:none}
 /* loading + draw */
 #loading{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:var(--berry);transition:opacity .45s}
 #loading.out{opacity:0}
@@ -404,6 +415,22 @@ body,button,input,textarea{line-height:1.05}
   </div>
 </div>
 
+<section id="welcome" hidden><div class="wl-card">
+  <svg class="load-art" viewBox="0 0 120 120" aria-hidden="true">
+    <ellipse cx="60" cy="108" rx="34" ry="6" fill="rgba(20,20,60,.25)"/>
+    <g class="b1"><circle cx="40" cy="70" r="22" fill="#26307E" stroke="#1B1F55" stroke-width="4"/><circle cx="33" cy="62" r="5" fill="#fff" opacity=".55"/><path d="M40 52l-4 -6h8z" fill="#1B1F55"/></g>
+    <g class="b2"><circle cx="80" cy="72" r="20" fill="#5B7CFF" stroke="#1B1F55" stroke-width="4"/><circle cx="74" cy="65" r="4.5" fill="#fff" opacity=".55"/><path d="M80 56l-4 -5h8z" fill="#1B1F55"/></g>
+    <g class="b3"><circle cx="60" cy="40" r="21" fill="#3F5BFF" stroke="#1B1F55" stroke-width="4"/><circle cx="53" cy="32" r="5" fill="#fff" opacity=".55"/>
+      <path d="M60 19c4-10 14-13 22-10-3 8-12 12-22 10z" fill="#5FCB7A" stroke="#1B1F55" stroke-width="3.5" stroke-linejoin="round"/></g>
+    <path d="M58 92c-7-5-11-8.5-11-12.5a5 5 0 0 1 11-2 5 5 0 0 1 11 2c0 4-4 7.5-11 12.5z" fill="#FF6F91" stroke="#1B1F55" stroke-width="3.2" stroke-linejoin="round"/>
+  </svg>
+  <h1>이름을 알려주세요</h1>
+  <form id="wlForm" novalidate>
+    <label class="name-field" id="wlField"><input type="text" id="wlName" maxlength="10" placeholder="이름" aria-label="이름" autocomplete="off" enterkeyhint="next"></label>
+    <button class="pill-btn" type="submit" id="wlGo" disabled>다음</button>
+  </form>
+</div></section>
+
 <div id="loading"><div class="load-card">
   <svg class="load-art" viewBox="0 0 120 120" aria-hidden="true">
     <ellipse cx="60" cy="108" rx="34" ry="6" fill="rgba(20,20,60,.25)"/>
@@ -460,22 +487,24 @@ const PAL={skin:['#FFE0C7','#FFC9A0','#F0A774','#D2844F','#94582F'],
 const OPT={hair:[['short','숏컷'],['bob','단발'],['long','긴머리'],['bun','똥머리'],['pony','포니테일'],['curly','곱슬']],
   eyes:[['round','동글눈'],['lazy','느긋눈'],['dot','콩눈'],['smile','웃는눈'],['sleepy','졸린눈']],
   mouth:[['smile','미소'],['open','활짝'],['cat','고양이'],['o','오']],
-  top:[['tee','티셔츠'],['shirt','셔츠'],['knit','니트'],['suit','정장'],['dress','원피스']],
-  bottom:[['pants','바지'],['shorts','반바지'],['skirt','치마']],
-  acc:[['none','없음'],['crown','화관'],['ribbon','리본'],['beret','베레모'],['glasses','안경'],['flower','꽃핀']]};
+  top:[['tee','티셔츠'],['shirt','셔츠'],['suit','정장'],['dress','원피스'],['dottee','도트 티'],['dotdress','도트 원피스']],
+  bottom:[['pants','바지'],['shorts','반바지'],['skirt','치마'],['overall','멜빵바지'],['long','롱스커트'],['dotskirt','도트 치마']],
+  shoe:[['sneakers','운동화'],['hightop','하이탑'],['boots','부츠'],['loafers','구두'],['maryjane','메리제인'],['sandals','샌들']],
+  acc:[['none','없음'],['crown','화관'],['ribbon','리본'],['beret','베레모'],['glasses','안경'],['flower','꽃핀'],['berry','블루베리'],['bouquet','꽃다발'],['catband','고양이 머리띠']]};
 const TABS=[{k:'skin',label:'피부',pal:'skin',field:'skin'},{k:'hair',label:'헤어',opt:'hair',pal:'hair',field:'hairColor'},
   {k:'eyes',label:'눈',opt:'eyes',pal:'eye',field:'eyeColor'},
   {k:'top',label:'상의',opt:'top',pal:'cloth',field:'topColor'},{k:'bottom',label:'하의',opt:'bottom',pal:'cloth',field:'bottomColor'},
-  {k:'shoes',label:'신발',pal:'shoe',field:'shoeColor'},{k:'acc',label:'소품',opt:'acc'}];
+  {k:'shoes',label:'신발',opt:'shoe',pal:'shoe',field:'shoeColor'},{k:'acc',label:'소품',opt:'acc'}];
+const HAND_ACC=new Set(['berry','bouquet']);
 const HEAD_TABS=new Set(['skin','hair','eyes','mouth','acc']);
 function randomLook(){return{skin:pick(PAL.skin),hair:pick(OPT.hair)[0],hairColor:pick(PAL.hair),eyes:pick(OPT.eyes)[0],eyeColor:pick(PAL.eye),
-  mouth:pick(OPT.mouth)[0],top:pick(OPT.top)[0],topColor:pick(PAL.cloth),bottom:pick(OPT.bottom)[0],bottomColor:pick(PAL.cloth),shoeColor:pick(PAL.shoe),acc:pick(OPT.acc)[0]}}
+  mouth:pick(OPT.mouth)[0],top:pick(OPT.top)[0],topColor:pick(PAL.cloth),bottom:pick(OPT.bottom)[0],bottomColor:pick(PAL.cloth),shoeColor:pick(PAL.shoe),shoe:pick(OPT.shoe)[0],acc:pick(OPT.acc)[0]}}
 const isHex=v=>typeof v==='string'&&/^#[0-9a-fA-F]{6}$/.test(v);
 function normLook(l){l=l&&typeof l==='object'?l:{};const d=randomLook();const o={};
-  for(const k of ['hair','eyes','mouth','top','bottom','acc'])o[k]=OPT[k].some(x=>x[0]===l[k])?l[k]:d[k];
+  for(const k of ['hair','eyes','mouth','top','bottom','shoe','acc'])o[k]=OPT[k].some(x=>x[0]===l[k])?l[k]:d[k];
   for(const k of ['skin','hairColor','eyeColor','topColor','bottomColor','shoeColor'])o[k]=isHex(l[k])?l[k]:d[k];return o}
-const GROOM={skin:'#F6CDAA',hair:'short',hairColor:'#3A2A22',eyes:'smile',eyeColor:'#2B2420',mouth:'smile',top:'suit',topColor:'#2F2B36',bottom:'pants',bottomColor:'#2F2B36',shoeColor:'#2F2B36',acc:'none'};
-const BRIDE={skin:'#FFE3CC',hair:'long',hairColor:'#4A3426',eyes:'shine',eyeColor:'#2B2420',mouth:'smile',top:'dress',topColor:'#FFFFFF',bottom:'skirt',bottomColor:'#FFFFFF',shoeColor:'#FFFFFF',acc:'veil'};
+const GROOM={skin:'#F6CDAA',hair:'short',hairColor:'#3A2A22',eyes:'smile',eyeColor:'#2B2420',mouth:'smile',top:'suit',topColor:'#2F2B36',bottom:'pants',bottomColor:'#2F2B36',shoeColor:'#2F2B36',shoe:'loafers',acc:'none'};
+const BRIDE={skin:'#FFE3CC',hair:'long',hairColor:'#4A3426',eyes:'shine',eyeColor:'#2B2420',mouth:'smile',top:'dress',topColor:'#FFFFFF',bottom:'skirt',bottomColor:'#FFFFFF',shoeColor:'#FFFFFF',shoe:'maryjane',acc:'veil'};
 
 /* ---------- drawing helpers ---------- */
 function rr(c,x,y,w,h,r){r=Math.min(r,w/2,h/2);c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
@@ -485,34 +514,53 @@ function shade(hex,p){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b
 const lum=hex=>{const n=parseInt(hex.slice(1),16);return((n>>16)*.3+(n>>8&255)*.59+(n&255)*.11)/255};
 
 /* ---------- character (original chibi: round mochi head, no nose) ---------- */
+function polka(c,tc,x0,y0,w,h){const col=lum(tc)>.72?'#4E5DB5':'#FFFFFF';c.fillStyle=col;
+  for(let r=0,y=y0+2.6;y<y0+h+2;y+=4.2,r++)for(let x=x0+(r%2?3.3:1.2);x<x0+w+2;x+=4.2){c.beginPath();c.arc(x,y,1.05,0,Math.PI*2);c.fill()}}
+function shoeArt(c,k,col,X,skin){const sole=lum(col)<.6?'#F4E9D8':'#C9BBA8';
+  if(k==='boots'){rr(c,X-.5,-8.6,4.6,8.6,1.8);c.fillStyle=col;c.fill();rr(c,X-.9,-3.4,5.8,3.4,1.6);c.fill();c.fillStyle=shade(col,-.3);c.fillRect(X-.9,-1.2,5.8,1.2);c.fillStyle=shade(col,.3);c.fillRect(X-.5,-8.6,4.6,1.2)}
+  else if(k==='hightop'){rr(c,X-.6,-7,4.8,7,1.8);c.fillStyle=col;c.fill();rr(c,X-1.2,-3.6,6.4,3.6,1.8);c.fillStyle=col;c.fill();c.fillStyle='#F4E9D8';c.fillRect(X-1.3,-1.5,6.6,1.5);ell(c,X+3.4,-2.2,1.9,1.3,'#F4E9D8');c.fillStyle=sole;c.fillRect(X+.3,-6.4,2.4,.7);c.fillRect(X+.3,-4.8,2.4,.7)}
+  else if(k==='loafers'){rr(c,X-1.2,-4,6.4,4,2);c.fillStyle=col;c.fill();ell(c,X+2.2,-3,1.6,.6,'rgba(255,255,255,.6)')}
+  else if(k==='maryjane'){rr(c,X-1.2,-4.2,6.4,4.2,2.1);c.fillStyle=col;c.fill();c.fillStyle=shade(col,-.3);c.fillRect(X-.6,-5.6,5.2,1.1);ell(c,X+3.8,-5,.8,.8,lum(col)<.5?'#F7D27C':'#4E5DB5')}
+  else if(k==='sandals'){ell(c,X+2,-2,3,2.2,skin);c.fillStyle=col;rr(c,X-1.2,-1.3,6.4,1.3,.6);c.fill();c.fillRect(X-.8,-3.8,5.6,1.1);c.fillRect(X+1.2,-5.6,1.4,2)}
+  else{rr(c,X-1.2,-4.6,6.4,4.6,2.2);c.fillStyle=col;c.fill();c.fillStyle=sole;c.fillRect(X-.4,-3,4.8,.9)}}
 function drawChar(c,x,y,L,o={}){
   const s=o.s||1,dir=o.dir||'down',ph=o.phase||0,mv=!!o.moving,t=o.t||0,seed=o.seed||0;
   c.save();c.translate(x,y);c.scale(s,s);
   if(!o.noShadow)ell(c,0,0,12,4,'rgba(60,50,30,.2)');
   const bob=mv?-Math.abs(Math.sin(ph))*2.2:(o.noBob?0:Math.sin(t*2.2+seed)*.5);c.translate(0,bob);
   const back=dir==='up',side=dir==='left'?-1:dir==='right'?1:0;
-  const skin=L.skin,dress=L.top==='dress',gown=dress&&L.acc==='veil';
+  const skin=L.skin,dress=L.top==='dress'||L.top==='dotdress',dots=L.top==='dottee'||L.top==='dotdress',gown=dress&&L.acc==='veil';
   const sw=mv?Math.sin(ph)*2.6:0;
-  const legCol=(dress||L.bottom!=='pants')?skin:L.bottomColor;
+  const legCol=(dress||(L.bottom!=='pants'&&L.bottom!=='overall'))?skin:L.bottomColor;
   {const hx=side*1.2,hy=-35;c.save();c.translate(hx,hy);c.scale(1.12,1.12);c.translate(-hx,-hy);if(L.acc==='veil'){}hairBack(c,L.hair,hx,hy,L.hairColor,side,back);c.restore()}
   c.save();c.scale(1,.8);
-  for(const [lx,k] of [[-4.8,sw],[1.2,-sw]]){rr(c,lx+k*.3,-13,3.6,11.5,1.8);c.fillStyle=legCol;c.fill();rr(c,lx-1.2+k*.3,-4.6,6.4,4.6,2.2);c.fillStyle=L.shoeColor;c.fill();c.fillStyle=lum(L.shoeColor)<.6?'#F4E9D8':'#C9BBA8';c.fillRect(lx-.4+k*.3,-3,4.8,.9)}
+  for(const [lx,k] of [[-4.8,sw],[1.2,-sw]]){rr(c,lx+k*.3,-13,3.6,11.5,1.8);c.fillStyle=legCol;c.fill();shoeArt(c,L.shoe,L.shoeColor,lx+k*.3,skin)}
   if(!dress){c.fillStyle=L.bottomColor;
     if(L.bottom==='skirt'){c.beginPath();c.moveTo(-8,-16);c.lineTo(8,-16);c.lineTo(11.5,-7);c.quadraticCurveTo(0,-4.5,-11.5,-7);c.closePath();c.fill()}
+    else if(L.bottom==='dotskirt'){c.beginPath();c.moveTo(-8,-16);c.lineTo(8,-16);c.lineTo(11.5,-7);c.quadraticCurveTo(0,-4.5,-11.5,-7);c.closePath();c.fill();c.save();c.clip();polka(c,L.bottomColor,-12,-17.5,24,12);c.restore()}
+    else if(L.bottom==='long'){c.beginPath();c.moveTo(-8,-16);c.lineTo(8,-16);c.lineTo(10.5,-3.2);c.quadraticCurveTo(0,-1.2,-10.5,-3.2);c.closePath();c.fill();c.save();c.clip();c.fillStyle=shade(L.bottomColor,-.12);c.fillRect(2.5,-17,10,16);c.restore()}
     else if(L.bottom==='shorts'){rr(c,-8.5,-16,17,7.5,3);c.fill()}else{rr(c,-8,-16,16,5,2.5);c.fill()}}
   const tc=L.topColor;
-  if(dress){const hem=gown?-.5:-5,wd=gown?16:12;c.beginPath();c.moveTo(-7,-27);c.lineTo(7,-27);c.lineTo(wd,hem);c.quadraticCurveTo(0,hem+3,-wd,hem);c.closePath();c.fillStyle=tc;c.fill();c.save();c.clip();c.fillStyle=shade(tc,-.12);c.beginPath();c.moveTo(3,-27);c.lineTo(9,-27);c.lineTo(wd+2,hem+3);c.lineTo(wd*.35,hem+3);c.closePath();c.fill();c.restore();
+  if(dress){const hem=gown?-.5:-5,wd=gown?16:12;c.beginPath();c.moveTo(-7,-27);c.lineTo(7,-27);c.lineTo(wd,hem);c.quadraticCurveTo(0,hem+3,-wd,hem);c.closePath();c.fillStyle=tc;c.fill();c.save();c.clip();c.fillStyle=shade(tc,-.12);c.beginPath();c.moveTo(3,-27);c.lineTo(9,-27);c.lineTo(wd+2,hem+3);c.lineTo(wd*.35,hem+3);c.closePath();c.fill();if(dots)polka(c,tc,-wd-1,-28,wd*2+2,hem+32);c.restore();
   }
-  else{rr(c,-8.5,-28,17,14,5.5);c.fillStyle=tc;c.fill();c.save();rr(c,-8.5,-28,17,14,5.5);c.clip();c.fillStyle=shade(tc,-.14);c.beginPath();c.moveTo(3.5,-28);c.lineTo(9,-28);c.lineTo(9,-14);c.lineTo(1.5,-14);c.closePath();c.fill();c.restore();
+  else{rr(c,-8.5,-28,17,14,5.5);c.fillStyle=tc;c.fill();c.save();rr(c,-8.5,-28,17,14,5.5);c.clip();c.fillStyle=shade(tc,-.14);c.beginPath();c.moveTo(3.5,-28);c.lineTo(9,-28);c.lineTo(9,-14);c.lineTo(1.5,-14);c.closePath();c.fill();if(dots)polka(c,tc,-9,-28,18,14);c.restore();
     if(!back){const dark=lum(tc)<.35;
       if(L.top==='suit'){c.fillStyle='#fff';c.beginPath();c.moveTo(-3.5,-28);c.lineTo(3.5,-28);c.lineTo(0,-20);c.closePath();c.fill();
         c.fillStyle=dark?'#F2A9A1':'#2F2B36';c.beginPath();c.moveTo(0,-25.5);c.lineTo(-3.4,-27.3);c.lineTo(-3.4,-23.7);c.closePath();c.moveTo(0,-25.5);c.lineTo(3.4,-27.3);c.lineTo(3.4,-23.7);c.closePath();c.fill()}
       else if(L.top==='shirt'){c.fillStyle='#fff';c.beginPath();c.moveTo(-5,-28);c.lineTo(0,-24.5);c.lineTo(-1.5,-22.5);c.closePath();c.moveTo(5,-28);c.lineTo(0,-24.5);c.lineTo(1.5,-22.5);c.closePath();c.fill()}
       else if(L.top==='knit'){c.fillStyle=shade(tc,-.1);rr(c,-8.5,-17,17,3,1.5);c.fill()}
       else{c.fillStyle=skin;c.beginPath();c.ellipse(0,-28,3.6,2.2,0,0,Math.PI);c.fill()}}}
+  if(!dress&&L.bottom==='overall'){const bc=L.bottomColor;c.fillStyle=bc;rr(c,-5.5,-24,11,9,2);c.fill();c.fillRect(-8,-17,16,2);
+    if(!back){c.strokeStyle=bc;c.lineWidth=2;c.lineCap='round';c.beginPath();c.moveTo(-4.2,-23.5);c.lineTo(-6,-27.5);c.moveTo(4.2,-23.5);c.lineTo(6,-27.5);c.stroke();const bt=lum(bc)<.5?'#F7D27C':'#4E5DB5';ell(c,-3.6,-22.6,.9,.9,bt);ell(c,3.6,-22.6,.9,.9,bt);c.fillStyle=shade(bc,-.15);rr(c,-2.6,-21.6,5.2,3.6,1);c.fill()}}
   const aw=mv?Math.sin(ph)*2.5:0,sleeve=dress?skin:tc;
   for(const [ax,k] of [[-10,aw],[10,-aw]]){ell(c,ax,-23+k*.2,3.6,4.3,sleeve);ell(c,ax+(ax<0?-.4:.4),-17.2+k*.6,3.1,3.1,skin);ell(c,ax+(ax<0?.4:1.2),-16.4+k*.6,1.9,1.6,shade(skin,-.1))}
   if(gown){ell(c,-11.5,-15,4,3.5,'#F7B3C2');ell(c,-9,-17,3,2.6,'#fff');ell(c,-13.5,-17.5,2.6,2.2,'#F7D27C')}
+  if(L.acc==='berry'){const bx=12.4+aw*.1,by=-21.5-aw*.6;ell(c,bx,by,4.6,4.6/.8,'#3F4FC4');ell(c,bx-1.6,by-2.4,1.4,1.4/.8,'rgba(255,255,255,.55)');
+    c.fillStyle='#232A6E';c.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5;c.lineTo(bx+Math.cos(a)*1.7,by-4.6/.8+.8+Math.sin(a)*1.7/.8)}c.closePath();c.fill();
+    c.fillStyle='#5FCB7A';c.beginPath();c.ellipse(bx+2.4,by-6.6,2.4,1.2/.8,-.5,0,Math.PI*2);c.fill();ell(c,10.8,-17.2-aw*.6,3.1,3.1,skin)}
+  if(L.acc==='bouquet'&&!gown){const bx=-11.6,by=-17.5+aw*.6;c.fillStyle='#FFF6E2';c.beginPath();c.moveTo(bx-4.4,by-2);c.lineTo(bx+4.4,by-2);c.lineTo(bx+.8,by+8);c.lineTo(bx-.8,by+8);c.closePath();c.fill();
+    ell(c,bx-2.6,by-4,2.6,2.6/.8,'#FF8FAB');ell(c,bx+2.6,by-4.2,2.6,2.6/.8,'#B9A5E2');ell(c,bx,by-6.4,2.8,2.8/.8,'#FFFFFF');ell(c,bx,by-6.4,1,1/.8,'#F7D27C');ell(c,bx-3.6,by-.6,1.6,1.4,'#7DB866');ell(c,bx+3.6,by-.8,1.6,1.4,'#7DB866');
+    c.fillStyle='#FF6F91';c.fillRect(bx-2.8,by+1.4,5.6,1.6);ell(c,-10.4,-17.2+aw*.6,3.1,3.1,skin)}
   c.restore();
   const hx=side*1.2,hy=-35,hc=L.hairColor;
   c.save();c.translate(hx,hy);c.scale(1.12,1.12);c.translate(-hx,-hy);
@@ -599,6 +647,9 @@ function acc(c,a,hx,hy,side,back){
   else if(a==='beret'){ell(c,hx+1,hy-11,15.5,6.2,'#C2564E');ell(c,hx-3,hy-13,6,2,'rgba(255,255,255,.18)');ell(c,hx+2,hy-17,1.6,2,'#C2564E')}
   else if(a==='glasses'&&!back){const fx=hx+side*3.2,sp=side?4.4:5.2;c.strokeStyle='#3A2E2A';c.lineWidth=1;for(const e of [-1,1]){c.beginPath();c.arc(fx+e*sp,hy+2.6,3.7,0,Math.PI*2);c.stroke()}c.beginPath();c.moveTo(fx-sp+3.7,hy+2.2);c.lineTo(fx+sp-3.7,hy+2.2);c.stroke()}
   else if(a==='flower'){flower(c,hx+(back?-8:-10),hy-7,2.6,'#FFFFFF')}
+  else if(a==='catband'){c.strokeStyle='#2A2440';c.lineWidth=2.2;c.beginPath();c.ellipse(hx,hy-2,14.6,12.6,0,Math.PI*1.08,Math.PI*1.92);c.stroke();
+    for(const e of [-1,1]){const ex=hx+e*8.6,ey=hy-12.4;c.fillStyle='#2A2440';c.beginPath();c.moveTo(ex-4.2,ey+2.6);c.lineTo(ex+e*1.2,ey-7);c.lineTo(ex+4.2,ey+2.6);c.closePath();c.fill();
+      if(!back){c.fillStyle='#FF9EB5';c.beginPath();c.moveTo(ex-2.2,ey+1.6);c.lineTo(ex+e*.8,ey-4);c.lineTo(ex+2.2,ey+1.6);c.closePath();c.fill()}}}
 }
 
 /* ---------- props ---------- */
@@ -1097,7 +1148,7 @@ function refreshPanels(){if(panelT)return;panelT=setTimeout(()=>{panelT=0;
 let crLook=null,crTab='hair',crFirst=true;
 const pv=$('#pv'),pq=pv.getContext('2d');
 function openCreator(look,name,first){crLook={...normLook(look)};crFirst=first;$('#nameIn').value=name||'';
-  $('#crDone').textContent=first?'이대로 입장하기':'이대로 저장하기';$('#crClose').hidden=!!first||!me;$('#creator').hidden=false;renderTabs();renderOpts()}
+  $('#crDone').textContent=first?'이대로 입장하기':'이대로 저장하기';$('#crClose').hidden=!!first||!me;$('#creator').classList.toggle('first',!!first);$('#creator').hidden=false;renderTabs();renderOpts()}
 const TAB_ICONS={
  skin:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="currentColor"/><circle cx="8" cy="13.5" r="1.6" fill="#F2A9A1"/><circle cx="16" cy="13.5" r="1.6" fill="#F2A9A1"/></svg>',
  hair:'<svg viewBox="0 0 24 24"><path d="M4 14c0-6 3.6-9.5 8-9.5S20 8 20 14v5h-3v-5.5c-2.5 0-6-1.4-7.5-3.6C9 12 7.3 13.2 7 13.5V19H4z" fill="currentColor"/></svg>',
@@ -1117,10 +1168,10 @@ function renderOpts(){const tab=TABS.find(t=>t.k===crTab),grid=$('#opts');grid.r
     b.setAttribute('aria-label',(tab.k==='skin'?'피부톤 ':'신발 색 ')+col);b.append(c);b.addEventListener('click',()=>{crLook[tab.field]=col;renderOpts()});grid.appendChild(b)}
   if(tab.opt)for(const [v,label] of OPT[tab.opt]){const b=document.createElement('button');b.className='opt';b.setAttribute('aria-pressed',String(crLook[tab.opt]===v));
     const c=document.createElement('canvas');c.width=148;c.height=148;const q=c.getContext('2d');const L={...crLook,[tab.opt]:v};
-    if(HEAD_TABS.has(tab.k)){const s=3.6;drawCharO(q,74,74+40*s,L,{s,noShadow:true})}else{const s=2.15;drawCharO(q,74,134,L,{s})}
+    if(HEAD_TABS.has(tab.k)&&!HAND_ACC.has(v)){const s=3.6;drawCharO(q,74,74+40*s,L,{s,noShadow:true})}else if(tab.k==='shoes'){const s=9;drawCharO(q,72,124,L,{s,noShadow:true})}else{const s=2.15;drawCharO(q,74,134,L,{s})}
     b.setAttribute('aria-label',label);b.title=label;b.append(c);b.addEventListener('click',()=>{crLook[tab.opt]=v;renderOpts()});grid.appendChild(b)}
-  const wrap=$('#swWrap'),sw=$('#sw');sw.replaceChildren();wrap.classList.toggle('noswatch',!tab.pal||!!colorTab);
-  const dis=tab.k==='bottom'&&crLook.top==='dress';wrap.classList.toggle('dim',dis);grid.classList.toggle('dim',dis);
+  const wrap=$('#swWrap'),sw=$('#sw');sw.replaceChildren();wrap.classList.toggle('noswatch',!!colorTab);wrap.classList.toggle('gone',!tab.pal);
+  const dis=tab.k==='bottom'&&(crLook.top==='dress'||crLook.top==='dotdress');wrap.classList.toggle('dim',dis);grid.classList.toggle('dim',dis);
   if(tab.pal&&!colorTab)for(const col of PAL[tab.pal]){const b=document.createElement('button');b.className='sw';b.style.background=col;b.setAttribute('aria-label','색상 '+col);
     b.setAttribute('aria-pressed',String(crLook[tab.field]===col));b.addEventListener('click',()=>{crLook[tab.field]=col;renderOpts()});sw.appendChild(b)}}
 function drawPreview(t){pq.setTransform(1,0,0,1,0,0);pq.clearRect(0,0,pv.width,pv.height);
@@ -1136,8 +1187,16 @@ $('#crDone').addEventListener('click',()=>{const nm=$('#nameIn').value.trim().sl
   else{me.name=nm;me.look=crLook;persist({name:nm,look:crLook,updatedAt:Date.now()});toast('새 모습으로 갈아입었어요')}
   refreshPanels()});
 
+/* ---------- welcome: name first ---------- */
+let afterEnter=null;
+function openWelcome(name,look){const w=$('#welcome'),i=$('#wlName'),go=$('#wlGo');i.value=name||'';go.disabled=!i.value.trim();w.hidden=false;
+  $('#wlForm').onsubmit=e=>{e.preventDefault();const nm=i.value.trim().slice(0,10);
+    if(!nm){const f=$('#wlField');f.classList.remove('err');void f.offsetWidth;f.classList.add('err');i.focus();return}
+    i.blur();w.hidden=true;openCreator(look,nm,true)}}
+$('#wlName').addEventListener('input',()=>{$('#wlGo').disabled=!$('#wlName').value.trim()});
+
 function enterVillage(){inVillage=true;player.x=me.x;player.y=me.y;const sp=clampTier(player,tierOf(player.y));player.x=sp.x;player.y=sp.y;camY=clampCam(player.y-viewH*.56);
-  persist(fullDoc());refreshPanels();setTimeout(()=>{const h=$('#hint');if(h.style.opacity!=='0')h.style.opacity=0},9000)}
+  persist(fullDoc());refreshPanels();if(afterEnter){const f=afterEnter;afterEnter=null;setTimeout(f,900)}setTimeout(()=>{const h=$('#hint');if(h.style.opacity!=='0')h.style.opacity=0},9000)}
 
 let lastSaved={x:0,y:0};
 setInterval(()=>{if(!inVillage||!me||player.moving)return;if(Math.hypot(player.x-lastSaved.x,player.y-lastSaved.y)>4){lastSaved={x:player.x,y:player.y};me.x=Math.round(player.x);me.y=Math.round(player.y);persist({x:me.x,y:me.y,updatedAt:Date.now()})}},3000);
@@ -1151,7 +1210,7 @@ async function boot(){setTimeout(()=>loadPhotos(),0);try{const v=getComputedStyl
   const saved=loadLocal();if(!me&&saved&&!shared)me=saved;
   if(!(shared&&[...others.values()].filter(o=>!o.demo).length>=3))spawnDemo();
   {const wait=Math.max(0,1900-(Date.now()-bootAt));await sleep(wait);const L=$('#loading');L.classList.add('out');setTimeout(()=>L.hidden=true,450)}
-  if(me)enterVillage();else openCreator(saved?saved.look:randomLook(),saved?saved.name:'',true);
+  if(me)enterVillage();else openWelcome(saved?saved.name:'',saved?saved.look:randomLook());
   refreshPanels()}
 /* ---------- host sign-in (open the site with #host at the end of the link) ---------- */
 function openHostLogin(){const b=document.createElement('form');b.className='host-login';
@@ -1159,7 +1218,7 @@ function openHostLogin(){const b=document.createElement('form');b.className='hos
   b.addEventListener('submit',async e=>{e.preventDefault();const pw=b.querySelector('#hostPw').value;if(!pw)return;const btn=b.querySelector('button');btn.disabled=true;
     const r=await BK.claimHost(pw);btn.disabled=false;if(r.ok){closeModal();toast('호스트로 들어왔어요');history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>location.reload(),700)}else b.querySelector('.host-err').textContent=r.msg});
   openModal('호스트 로그인',b);setTimeout(()=>{const i=document.getElementById('hostPw');i&&i.focus()},60)}
-boot().then(()=>{if(location.hash==='#host'&&window.BK&&BK.enabled&&!isOwner)setTimeout(openHostLogin,900)});
+boot().then(()=>{if(location.hash==='#host'&&window.BK&&BK.enabled&&!isOwner){if(inVillage)setTimeout(openHostLogin,900);else afterEnter=openHostLogin}});
 })();
 </script>
 </body>
