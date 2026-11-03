@@ -446,7 +446,7 @@ body,button,input,textarea{line-height:1.05}
 (()=>{
 "use strict";
 const $=s=>document.querySelector(s);
-const W=480,H=849,CS=.72;
+const W=480,H=849,CS=.82,ZOOM=1.1;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- seeded random ---------- */
@@ -471,7 +471,7 @@ function detour(pts,from){const out=[];let prev=from;for(const p of pts){const k
 const SPOTS={
   greet:{x:240,y:118,r:44,stand:{x:240,y:158},mark:{x:240,y:52}},
   book:{x:89,y:362,r:36,stand:{x:104,y:404},mark:{x:89,y:316}},
-  cake:{x:240,y:425,r:46,stand:{x:240,y:464},mark:{x:240,y:368}},
+  cake:{x:240,y:422,r:54,stand:{x:240,y:466},mark:{x:240,y:350}},
   photo:{x:238,y:600,r:36,stand:{x:238,y:644},mark:{x:238,y:548}}
 };
 const QUESTS=[{k:'book',title:'방명록 남기기',hint:'광장 왼쪽 나무 게시판'},
@@ -741,9 +741,9 @@ function buildGround(){G=new Image();G.decoding='async';G.src='assets/map.webp'}
 /* ---------- decor (depth-sorted sprites) ---------- */
 const DECOR=[];
 const CAKE=new Image();CAKE.decoding='async';CAKE.src='assets/cake.webp';
-DECOR.push({type:'cake2',x:240,y:448,w:132});
+DECOR.push({type:'cake2',x:240,y:450,w:164});
 /* cake table footprint: feet can't enter */
-const BLOCKS=[{x0:178,x1:302,y0:412,y1:450}];
+const BLOCKS=[{x0:162,x1:318,y0:404,y1:452}];
 const blocked=(x,y)=>BLOCKS.some(b=>x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1);
 
 /* ---------- state ---------- */
@@ -811,7 +811,7 @@ function clearDemo(){for(const [id,o] of others)if(o.demo)others.delete(id);demo
 const stage=$('#stage'),cv=$('#cv'),ctx=cv.getContext('2d');
 let dpr=1,scale=1,viewH=800;
 function resize(){dpr=Math.min(2,window.devicePixelRatio||1);const r=stage.getBoundingClientRect();cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));
-  scale=Math.max(r.width/W,r.height/H);viewH=r.height/scale;viewW=r.width/scale}
+  scale=Math.max(r.width/W,r.height/H)*(replay?1:ZOOM);viewH=r.height/scale;viewW=r.width/scale}
 window.addEventListener('resize',resize);
 const clampCam=y=>Math.max(0,Math.min(Math.max(0,H-viewH),y));
 const clampCamX=x=>Math.max(0,Math.min(Math.max(0,W-viewW),x));
@@ -837,7 +837,7 @@ function update(dt,t,ts){
   for(const o of others.values()){stepMover(o,dt,o.demo?60:110);
     if(o.demo&&ts>o.wanderAt&&!o.path.length){const t2=tierOf(o.y),T=TIERS[t2];o.path=route(o,{x:R(T.x0,T.x1),y:R(T.y0,T.y1)});o.wanderAt=ts+R(4000,9000)}}
   if(inVillage&&performance.now()-lastDragAt>2200){const tgt=clampCam(player.y-viewH*.56);camY+=(tgt-camY)*Math.min(1,dt*4)}
-  {const tx=clampCamX((inVillage?player.x:W/2)-viewW/2);camX+=(tx-camX)*Math.min(1,dt*4);camX=clampCamX(camX)}
+  if(performance.now()-lastDragAt>2200){let tx=Math.min(W/2-viewW/2,50);if(inVillage){const m=48;if(player.x<tx+m)tx=player.x-m;else if(player.x>tx+viewW-m)tx=player.x-viewW+m}tx=clampCamX(tx);camX+=(tx-camX)*Math.min(1,dt*4)}camX=clampCamX(camX);
   camY=clampCam(camY);
   const now=performance.now();bubbles=bubbles.filter(b=>b.until>now);
   if(now>nextBubbleAt){nextBubbleAt=now+3200;const pool=[...others.values()].filter(o=>o.msg&&!hiddenMsgs.has(o.id)&&Math.abs(o.y-(camY+viewH/2))<viewH);
@@ -890,15 +890,15 @@ function tagColor(name){let h=0;for(const ch of String(name))h=(h*31+ch.charCode
 function nameTag(c,x,y,name,mine,demo,host){c.font='700 16px '+UI_FONT;const label=demo?name+' · 예시':name;const w=c.measureText(label).width+14;
   const col=tagColor(name);c.fillStyle=col;rr(c,x-w/2,y+5,w,16,3.5);c.fill();if(mine){c.strokeStyle='#FFFDF7';c.lineWidth=1.6;c.stroke()}
   c.fillStyle=lum(col)>.62?'#2A2440':'#FFFFFF';c.textAlign='center';c.textBaseline='middle';c.fillText(label,x,y+14)}
-function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const t=text.length>18?text.slice(0,17)+'…':text;const w=c.measureText(t).width+20;const bx=x-w/2,by=y-66;
+function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const t=text.length>18?text.slice(0,17)+'…':text;const w=c.measureText(t).width+20;const bx=x-w/2,by=y-75;
   c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,24,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+23);c.lineTo(x,by+30);c.lineTo(x+5,by+23);c.closePath();c.fill();
   c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';c.fillText(t,x,by+12.5)}
 
 /* ---------- input ---------- */
 let pd=null;
-cv.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,cam:camY,drag:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
+cv.addEventListener('pointerdown',e=>{pd={x:e.clientX,y:e.clientY,cam:camY,camX,drag:false};try{cv.setPointerCapture(e.pointerId)}catch(_){}});
 cv.addEventListener('pointermove',e=>{if(!pd)return;const dy=e.clientY-pd.y,dx=e.clientX-pd.x;if(!pd.drag&&Math.hypot(dx,dy)>9)pd.drag=true;
-  if(pd.drag){camY=clampCam(pd.cam-dy/scale);lastDragAt=performance.now();hideHint()}});
+  if(pd.drag){camY=clampCam(pd.cam-dy/scale);camX=clampCamX(pd.camX-dx/scale);lastDragAt=performance.now();hideHint()}});
 cv.addEventListener('pointerup',e=>{if(pd&&!pd.drag){const r=cv.getBoundingClientRect();onTap((e.clientX-r.left)/scale+camX,(e.clientY-r.top)/scale+camY)}pd=null});
 cv.addEventListener('pointercancel',()=>pd=null);
 cv.addEventListener('wheel',e=>{e.preventDefault();camY=clampCam(camY+e.deltaY/scale);lastDragAt=performance.now()},{passive:false});
@@ -928,7 +928,7 @@ function stampFx(label){const el=$('#stampFx');el.innerHTML=berrySvg(128)+'<p></
   clearTimeout(stampFx.t);stampFx.t=setTimeout(()=>el.hidden=true,1500)}
 function takePhoto(){player.dir='down';player.moving=false;
   setTimeout(()=>{const f=$('#flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');
-    const sx=Math.max(0,(player.x-64-camX)*scale*dpr),sy=Math.max(0,(player.y-96-camY)*scale*dpr),sw=128*scale*dpr,sh=120*scale*dpr;
+    const sx=Math.max(0,(player.x-73-camX)*scale*dpr),sy=Math.max(0,(player.y-109-camY)*scale*dpr),sw=146*scale*dpr,sh=137*scale*dpr;
     const p=document.createElement('canvas');p.width=320;p.height=300;const q=p.getContext('2d');try{q.drawImage(cv,sx,sy,sw,sh,0,0,320,300)}catch(e){}
         let url='';try{url=p.toDataURL('image/jpeg',.85)}catch(e){}
     if(url)addPhoto(url);
@@ -1085,8 +1085,8 @@ async function loadSnaps(){if(!shared)return localSnaps.slice();try{const q=awai
 async function openReplay(){const snaps=await loadSnaps();if(snaps.length<2){toast('기록이 2장 이상 쌓여야 재생할 수 있어요');return}
   hostOpen=false;$('#host').hidden=true;const t0=snaps[0].at,t1=snaps[snaps.length-1].at;
   replay={snaps,t0,t1,dur:Math.min(180,Math.max(15,(t1-t0)/1000/80))*1000,el:0,playing:true,seen:new Map()};
-  savedOthers=others;others=new Map();inVillage=false;bubbles=[];$('#stage').classList.add('replaying');$('#replayUI').hidden=false;$('#rpPlay').textContent='❚❚'}
-function closeReplay(){if(!replay)return;replay=null;others=savedOthers;savedOthers=null;bubbles=[];inVillage=!!me;$('#stage').classList.remove('replaying');$('#replayUI').hidden=true;openHost()}
+  savedOthers=others;others=new Map();inVillage=false;bubbles=[];$('#stage').classList.add('replaying');$('#replayUI').hidden=false;resize();$('#rpPlay').textContent='❚❚'}
+function closeReplay(){if(!replay)return;replay=null;resize();others=savedOthers;savedOthers=null;bubbles=[];inVillage=!!me;$('#stage').classList.remove('replaying');$('#replayUI').hidden=true;openHost()}
 function stepReplay(dt){const r=replay;if(r.playing){r.el=Math.min(r.dur,r.el+dt*1000);if(r.el>=r.dur){r.playing=false;$('#rpPlay').textContent='▶'}}
   const T=r.t0+(r.el/r.dur)*(r.t1-r.t0);let k=0;while(k<r.snaps.length-2&&r.snaps[k+1].at<=T)k++;
   const A=r.snaps[k],B=r.snaps[k+1],f=Math.max(0,Math.min(1,(T-A.at)/Math.max(1,B.at-A.at)));const ia=new Map(A.g.map(g=>[g.i,g])),ib=new Map(B.g.map(g=>[g.i,g]));
