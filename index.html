@@ -139,6 +139,20 @@ textarea,input[type=text]{font:inherit;color:var(--ink);background:var(--cream);
 .polaroid{background:#fff;padding:10px 10px 34px;border-radius:6px;box-shadow:0 8px 20px rgba(60,45,25,.18);transform:rotate(-2deg);position:relative}
 .polaroid canvas,.polaroid img{display:block;width:100%;border-radius:2px}
 .polaroid span{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-family:var(--f-display);color:var(--ink-soft)}
+.stk-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+.stk-wrap .polaroid{transform:none;width:min(290px,100%);padding:12px 12px 48px;box-sizing:border-box}
+.stk-stage{position:relative;overflow:hidden;border-radius:2px;touch-action:none;user-select:none;-webkit-user-select:none}
+.stk-stage img{display:block;width:100%;pointer-events:none}
+.stk{position:absolute;left:0;top:0;transform-origin:center;touch-action:none;cursor:grab}
+.stk svg{display:block;width:100%;height:100%;pointer-events:none}
+.stk.sel{outline:2px dashed #4E5DB5;outline-offset:2px;border-radius:6px}
+.stk-del{position:absolute;right:-12px;top:-12px;width:24px;height:24px;border-radius:50%;border:2px solid #fff;background:#FF6F91;color:#fff;font-size:18px;line-height:18px;padding:0;display:none}
+.stk.sel .stk-del{display:block}
+.stk-tray{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;width:min(300px,100%)}
+.stk-tray button{border:none;background:var(--cream);border-radius:12px;padding:6px;aspect-ratio:1}
+.stk-tray svg{width:100%;height:100%;display:block}
+.stk-help{margin:0;font-size:19px;color:var(--ink-soft);text-align:center}
+.photo-view .pill-btn,.stk-wrap .pill-btn{font-size:23px;padding:11px 18px}
 .photo-view{display:flex;flex-direction:column;align-items:center;gap:16px}.photo-view .polaroid{width:min(280px,100%);padding:12px 12px 52px}
 .polaroid .pol-date{bottom:14px;font-size:24px;color:#8E8FA8;letter-spacing:.04em}
 .draw-btns.center{justify-content:center}
@@ -458,7 +472,7 @@ body,button,input,textarea{line-height:1.05}
 (()=>{
 "use strict";
 const $=s=>document.querySelector(s);
-const W=480,H=849,CS=1,ZOOM=1.1;
+const W=480,H=849,CS=1.2,ZOOM=1.1;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- seeded random ---------- */
@@ -766,7 +780,7 @@ let hiddenMsgs=new Set(),hostOpen=false;
 let me=null,shared=false,db=null,uid=null,userCap=null,isOwner=false,readOnly=false,guestRef=null,ownExists=false,lastDraw=null,inVillage=false;
 const player={x:240,y:430,dir:'down',phase:0,moving:false,path:[],action:null};
 let others=new Map();
-const couple=[{name:'진배',look:GROOM,x:219,y:132},{name:'예린',look:BRIDE,x:261,y:132}];
+const couple=[{name:'진배',look:GROOM,x:214,y:134},{name:'예린',look:BRIDE,x:266,y:134}];
 let myPhotos=[];const PHOTO_LS='bk-wedding-photos';
 let camY=520,camX=0,viewW=480,lastDragAt=0,tapFx=null,bubbles=[],nextBubbleAt=0;
 
@@ -906,7 +920,7 @@ function nameTag(c,x,y,name,mine,demo,host){c.font='700 16px '+UI_FONT;const lab
   const col=host?tagColor(name==='진배'?'신랑':'신부'):tagColor(name);c.fillStyle=col;rr(c,x-w/2,y+5,w,16,3.5);c.fill();if(mine){c.strokeStyle='#FFFDF7';c.lineWidth=1.6;c.stroke()}
   c.fillStyle=lum(col)>.62?'#2A2440':'#FFFFFF';c.textAlign='center';c.textBaseline='middle';c.fillText(label,x,y+14)}
 function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const L=[];let cur='';for(const ch of String(text)){if(c.measureText(cur+ch).width>150){L.push(cur);cur=ch;if(L.length===2)break}else cur+=ch}if(L.length<2&&cur)L.push(cur);else if(L.length===2&&cur&&L.join('').length<String(text).length)L[1]=L[1].slice(0,-1)+'…';
-  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=x-w/2,by=y-92-extra;
+  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=x-w/2,by=y-110-extra;
   const bh=24+extra;c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,bh,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+bh-1);c.lineTo(x,by+bh+6);c.lineTo(x+5,by+bh-1);c.closePath();c.fill();
   c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';L.forEach((l,i)=>c.fillText(l,x,by+12.5+i*18))}
 
@@ -920,7 +934,7 @@ cv.addEventListener('pointercancel',()=>pd=null);
 cv.addEventListener('wheel',e=>{e.preventDefault();camY=clampCam(camY+e.deltaY/scale);lastDragAt=performance.now()},{passive:false});
 function onTap(x,y){if(!inVillage||!$('#talk').hidden)return;hideHint();lastDragAt=0;
   for(const [k,s] of Object.entries(SPOTS)){if(Math.hypot(x-s.x,(y-s.y)*1.3)<s.r||(s.mark&&Math.hypot(x-s.mark.x,y-s.mark.y)<18)){goTo(s.stand,k);return}}
-  for(const o of others.values()){if(Math.abs(x-o.x)<12&&y<o.y+4&&y>o.y-42){bubbles=bubbles.filter(b=>b.who!==o);bubbles.push({who:o,text:o.msg||(o.name+'님이에요'),until:performance.now()+4200});return}}
+  for(const o of others.values()){if(Math.abs(x-o.x)<15&&y<o.y+5&&y>o.y-52){bubbles=bubbles.filter(b=>b.who!==o);bubbles.push({who:o,text:o.msg||(o.name+'님이에요'),until:performance.now()+4200});return}}
   goTo({x,y},null)}
 function goTo(p,action){if(blocked(p.x,p.y)){const b=BLOCKS.find(b=>p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1);p={x:p.x,y:p.y<(b.y0+b.y1)/2?b.y0-2:b.y1+4}}player.path=route(player,p);player.action=action;const last=player.path[player.path.length-1];tapFx={x:last.x,y:last.y,at:performance.now()};
   if(!action&&!player.path.length)player.moving=false}
@@ -944,7 +958,7 @@ function stampFx(label){const el=$('#stampFx');el.innerHTML=berrySvg(128)+'<p></
   clearTimeout(stampFx.t);stampFx.t=setTimeout(()=>el.hidden=true,1500)}
 function takePhoto(){player.dir='down';player.moving=false;player.path=[];player.action=null;
   setTimeout(()=>{const f=$('#flash');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');
-    const PW=250,PH=234,sw=PW*scale*dpr,sh=PH*scale*dpr;const sx=Math.max(0,Math.min(cv.width-sw,(player.x-PW/2-camX)*scale*dpr)),sy=Math.max(0,Math.min(cv.height-sh,(player.y-PH+72-camY)*scale*dpr));
+    const PW=290,PH=272,sw=PW*scale*dpr,sh=PH*scale*dpr;const sx=Math.max(0,Math.min(cv.width-sw,(player.x-PW/2-camX)*scale*dpr)),sy=Math.max(0,Math.min(cv.height-sh,(player.y-PH+84-camY)*scale*dpr));
     const p=document.createElement('canvas');p.width=480;p.height=449;const q=p.getContext('2d');try{q.drawImage(cv,sx,sy,sw,sh,0,0,480,449)}catch(e){}
         let url='';try{url=p.toDataURL('image/jpeg',.85)}catch(e){}
     if(url)addPhoto(url);
@@ -958,10 +972,57 @@ async function savePhotoToDevice(ph,btn){const dl=window.claude&&typeof window.c
   if(!dl){toast('사진을 길게 눌러 저장해주세요');return}
   try{const blob=await (await fetch(ph.url)).blob();const d=new Date(ph.at);await dl.save({filename:`bluberrykisses-${d.getMonth()+1}${String(d.getDate()).padStart(2,'0')}-${d.getHours()}${String(d.getMinutes()).padStart(2,'0')}.jpg`,data:blob});toast('사진을 저장했어요')}
   catch(e){const c=e&&e.code;if(c==='declined')return;if(c==='rate_limited'){toast('잠시 후 다시 눌러주세요');return}toast('여기서는 저장할 수 없어요. 사진을 길게 눌러 저장해주세요')}}
+/* ---------- polaroid stickers ---------- */
+const STK_O='#2A1F5C';
+const STICKERS={
+  heart:`<path d="M32 54C16 43 7 35 7 24a12 12 0 0 1 25-6 12 12 0 0 1 25 6c0 11-9 19-25 30z" fill="#FF6F91" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><ellipse cx="20" cy="22" rx="4" ry="3" fill="#fff" opacity=".7"/>`,
+  berry:`<circle cx="32" cy="36" r="20" fill="#3F5BFF" stroke="${STK_O}" stroke-width="4"/><path d="M26 18l6 5 6-5-2 7h-8z" fill="${STK_O}"/><path d="M34 16c4-7 12-8 16-5-3 6-10 8-16 5z" fill="#5FCB7A" stroke="${STK_O}" stroke-width="3" stroke-linejoin="round"/><circle cx="24" cy="30" r="4" fill="#fff" opacity=".6"/>`,
+  star:`<path d="M32 6l7.6 16.4L57 24.6 44 37l3.4 18L32 46.4 16.6 55 20 37 7 24.6l17.4-2.2z" fill="#FFD23F" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/>`,
+  sparkle:`<path d="M24 8c2 12 6 16 18 18-12 2-16 6-18 18-2-12-6-16-18-18 12-2 16-6 18-18z" fill="#FFFFFF" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/><path d="M47 34c1 7 4 9 10 10-6 1-9 3-10 10-1-7-4-9-10-10 6-1 9-3 10-10z" fill="#9FD8FF" stroke="${STK_O}" stroke-width="3" stroke-linejoin="round"/>`,
+  flower:`<g stroke="${STK_O}" stroke-width="3.5">${[0,1,2,3,4].map(i=>{const a=i/5*Math.PI*2-Math.PI/2;return `<circle cx="${32+Math.cos(a)*14}" cy="${32+Math.sin(a)*14}" r="11" fill="#FFFFFF"/>`}).join('')}<circle cx="32" cy="32" r="8" fill="#FFD23F"/></g>`,
+  ribbon:`<path d="M32 30L10 18v26zM32 30l22-12v26z" fill="#FF8FAB" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><path d="M28 34l-6 20 7-3 3 6 2-21z" fill="#FF6F91" stroke="${STK_O}" stroke-width="3" stroke-linejoin="round"/><circle cx="32" cy="31" r="6" fill="#FF6F91" stroke="${STK_O}" stroke-width="4"/>`,
+  ring:`<circle cx="32" cy="40" r="16" fill="none" stroke="${STK_O}" stroke-width="9"/><circle cx="32" cy="40" r="16" fill="none" stroke="#FFD23F" stroke-width="4.5"/><path d="M24 14h16l5 6-13 10-13-10z" fill="#BDE7FF" stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"/>`,
+  cheers:`<g stroke="${STK_O}" stroke-width="3.5" stroke-linejoin="round"><path d="M10 12h16l-2 16a6 6 0 0 1-12 0z" fill="#FFE38A" transform="rotate(-14 18 30)"/><path d="M38 12h16l-2 16a6 6 0 0 1-12 0z" fill="#FFE38A" transform="rotate(14 46 30)"/></g><path d="M16 34l-2 18M48 34l2 18M8 54h12M44 54h12" stroke="${STK_O}" stroke-width="3.5" stroke-linecap="round"/><path d="M32 4v8M24 8l3 5M40 8l-3 5" stroke="#FF6F91" stroke-width="3" stroke-linecap="round"/>`,
+  cake:`<rect x="10" y="30" width="44" height="22" rx="5" fill="#7FA6FF" stroke="${STK_O}" stroke-width="4"/><path d="M10 38q5.5 5 11 0t11 0 11 0 11 0" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/><rect x="29" y="14" width="6" height="16" rx="2" fill="#fff" stroke="${STK_O}" stroke-width="3"/><path d="M32 4q5 6 0 9-5-3 0-9z" fill="#FFD23F" stroke="${STK_O}" stroke-width="2.5"/>`,
+  kiss:`<path d="M10 32c6-10 14-12 22-6 8-6 16-4 22 6-6 10-14 14-22 14S16 42 10 32z" fill="#FF5A7A" stroke="${STK_O}" stroke-width="4" stroke-linejoin="round"/><path d="M12 32q20 6 40 0" fill="none" stroke="${STK_O}" stroke-width="3" stroke-linecap="round"/>`
+};
+const stkSvg=k=>`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${STICKERS[k]}</svg>`;
+function openStickers(ph){const wrap=document.createElement('div');wrap.className='stk-wrap';
+  const pol=document.createElement('div');pol.className='polaroid';const stage=document.createElement('div');stage.className='stk-stage';
+  const im=document.createElement('img');im.src=ph.url;im.alt='꾸밀 사진';stage.appendChild(im);pol.appendChild(stage);wrap.appendChild(pol);
+  const help=document.createElement('p');help.className='stk-help';help.textContent='스티커를 눌러 붙이고, 끌어서 옮기고, 두 손가락으로 크기를 바꿔요';wrap.appendChild(help);
+  const tray=document.createElement('div');tray.className='stk-tray';wrap.appendChild(tray);
+  const items=[];let sel=null;
+  const place=it=>{const W=stage.clientWidth,sz=it.s*W;it.el.style.width=it.el.style.height=sz+'px';it.el.style.transform=`translate(${it.x*W-sz/2}px,${it.y*stage.clientHeight-sz/2}px) rotate(${it.r}deg)`};
+  const select=it=>{sel=it;for(const o of items)o.el.classList.toggle('sel',o===it)};
+  function add(k){const el=document.createElement('div');el.className='stk';el.innerHTML=stkSvg(k);const del=document.createElement('button');del.className='stk-del';del.type='button';del.textContent='×';del.setAttribute('aria-label','스티커 지우기');el.appendChild(del);
+    const it={k,el,x:.5+(Math.random()-.5)*.3,y:.5+(Math.random()-.5)*.3,s:.24,r:Math.round((Math.random()-.5)*24)};items.push(it);stage.appendChild(el);place(it);select(it);
+    del.addEventListener('pointerdown',e=>e.stopPropagation());del.addEventListener('click',e=>{e.stopPropagation();el.remove();items.splice(items.indexOf(it),1);sel=null});
+    const pts=new Map();let start=null;
+    el.addEventListener('pointerdown',e=>{e.preventDefault();select(it);el.setPointerCapture(e.pointerId);pts.set(e.pointerId,{x:e.clientX,y:e.clientY});start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)}});
+    el.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId)||!start)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});const W=stage.clientWidth,H=stage.clientHeight;
+      if(pts.size===1&&start.pts.size===1){const p0=[...start.pts.values()][0],p=[...pts.values()][0];it.x=Math.max(0,Math.min(1,start.x+(p.x-p0.x)/W));it.y=Math.max(0,Math.min(1,start.y+(p.y-p0.y)/H))}
+      else if(pts.size>=2){if(start.pts.size<2)start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)};const [a0,b0]=[...start.pts.values()],[a,b]=[...pts.values()];const d0=Math.hypot(a0.x-b0.x,a0.y-b0.y)||1,d=Math.hypot(a.x-b.x,a.y-b.y);it.s=Math.max(.1,Math.min(.7,start.s*d/d0))}
+      place(it)});
+    const end=e=>{pts.delete(e.pointerId);start={x:it.x,y:it.y,s:it.s,pts:new Map(pts)}};el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);
+    el.addEventListener('wheel',e=>{e.preventDefault();it.s=Math.max(.1,Math.min(.7,it.s*(e.deltaY<0?1.08:.92)));place(it)},{passive:false})}
+  for(const k of Object.keys(STICKERS)){const b=document.createElement('button');b.type='button';b.innerHTML=stkSvg(k);b.setAttribute('aria-label','스티커');b.addEventListener('click',()=>add(k));tray.appendChild(b)}
+  stage.addEventListener('pointerdown',e=>{if(e.target===stage)select(null)});
+  const row=document.createElement('div');row.className='draw-btns center';const ok=document.createElement('button');ok.className='pill-btn';ok.textContent='다 꾸몄어요';
+  const cancel=document.createElement('button');cancel.className='pill-btn soft';cancel.textContent='취소';cancel.addEventListener('click',()=>openPhoto(ph));row.append(cancel,ok);wrap.appendChild(row);
+  ok.addEventListener('click',async()=>{if(!items.length){openPhoto(ph);return}ok.disabled=true;
+    try{const base=await loadImg(ph.url);const cw=base.naturalWidth,ch=base.naturalHeight;const c=document.createElement('canvas');c.width=cw;c.height=ch;const q=c.getContext('2d');q.drawImage(base,0,0);
+      for(const it of items){const img=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(stkSvg(it.k)));const sz=it.s*cw;q.save();q.translate(it.x*cw,it.y*ch);q.rotate(it.r*Math.PI/180);q.drawImage(img,-sz/2,-sz/2,sz,sz);q.restore()}
+      ph.url=c.toDataURL('image/jpeg',.88);await storePhoto(ph);openPhoto(ph,'완성!')}catch(e){ok.disabled=false;toast('저장하지 못했어요. 다시 눌러주세요')}});
+  openModal('스티커 꾸미기',wrap)}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
+async function storePhoto(ph){if(shared&&uid){try{await db.collection('data/users/'+uid).doc('photo-'+ph.at).set(ph);return}catch(e){}}
+  try{localStorage.setItem(PHOTO_LS,JSON.stringify(myPhotos))}catch(e){}}
 function openPhoto(ph,title){const body=document.createElement('div');body.className='photo-view';const pol=document.createElement('div');pol.className='polaroid';
   const im=document.createElement('img');im.src=ph.url;im.alt='포토존에서 찍은 내 캐릭터 사진';pol.append(im);body.appendChild(pol);
   const row=document.createElement('div');row.className='draw-btns center';const sv=document.createElement('button');sv.className='pill-btn';sv.textContent='폰에 저장';sv.addEventListener('click',()=>savePhotoToDevice(ph,sv));
-  const al=document.createElement('button');al.className='pill-btn soft';al.textContent='앨범 보기';al.addEventListener('click',openAlbum);row.append(sv,al);body.appendChild(row);openModal(title||'사진',body)}
+  const st=document.createElement('button');st.className='pill-btn soft';st.textContent='스티커 꾸미기';st.addEventListener('click',()=>openStickers(ph));
+  const al=document.createElement('button');al.className='pill-btn soft';al.textContent='앨범';al.addEventListener('click',openAlbum);row.append(sv,st,al);body.appendChild(row);openModal(title||'사진',body)}
 
 /* ---------- UI: modal, phone, panels ---------- */
 let modalOnClose=null;
