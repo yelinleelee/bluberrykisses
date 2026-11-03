@@ -476,7 +476,7 @@ body,button,input,textarea{line-height:1.05}
 (()=>{
 "use strict";
 const $=s=>document.querySelector(s);
-const W=480,H=849,CS=1.2,ZOOM=1.2;
+const W=480,H=849,CS=1.08,ZOOM=1.2;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- seeded random ---------- */
@@ -925,7 +925,7 @@ function nameTag(c,x,y,name,mine,demo,host){c.font='700 16px '+UI_FONT;const lab
   const col=host?tagColor(name==='진배'?'신랑':'신부'):tagColor(name);c.fillStyle=col;rr(c,x-w/2,y+5,w,16,3.5);c.fill();if(mine){c.strokeStyle='#FFFDF7';c.lineWidth=1.6;c.stroke()}
   c.fillStyle=lum(col)>.62?'#2A2440':'#FFFFFF';c.textAlign='center';c.textBaseline='middle';c.fillText(label,x,y+14)}
 function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const L=[];let cur='';for(const ch of String(text)){if(c.measureText(cur+ch).width>150){L.push(cur);cur=ch;if(L.length===2)break}else cur+=ch}if(L.length<2&&cur)L.push(cur);else if(L.length===2&&cur&&L.join('').length<String(text).length)L[1]=L[1].slice(0,-1)+'…';
-  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=Math.max(camX+4,Math.min(camX+viewW-w-4,x-w/2)),by=y-110-extra;
+  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=Math.max(camX+4,Math.min(camX+viewW-w-4,x-w/2)),by=y-100-extra;
   const bh=24+extra;c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,bh,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+bh-1);c.lineTo(x,by+bh+6);c.lineTo(x+5,by+bh-1);c.closePath();c.fill();
   c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';L.forEach((l,i)=>c.fillText(l,x,by+12.5+i*18))}
 
