@@ -56,9 +56,9 @@ h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance
 .dot-live{width:9px;height:9px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 3px rgba(120,184,102,.25)}
   width:66px;height:66px;border-radius:24px;border:none;background:var(--berry);color:#fff;display:grid;place-items:center;
   box-shadow:0 5px 0 var(--berry-dk),0 10px 22px rgba(40,50,110,.3);font-family:var(--f-display);font-size:18.6px}
-#hint{position:absolute;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(91,74,62,.82);color:#fff;
+#hint{position:absolute;left:50%;bottom:calc(78px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:rgba(91,74,62,.82);color:#fff;
   padding:8px 14px;border-radius:999px;font-size:20.2px;white-space:nowrap;pointer-events:none;transition:opacity .6s}
-#toast{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);opacity:0;transition:.3s;
+#toast{position:absolute;left:50%;bottom:calc(126px + env(safe-area-inset-bottom,0px));transform:translate(-50%,8px);opacity:0;transition:.3s;
   background:var(--paper);border-radius:999px;padding:9px 16px;font-family:var(--f-display);font-size:23.2px;box-shadow:0 6px 18px rgba(60,45,25,.18);
   pointer-events:none;width:max-content;max-width:calc(100% - 32px);box-sizing:border-box;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
@@ -234,7 +234,13 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .rec-status i{width:12px;height:12px;border-radius:50%;background:#C9CCDA}
 .rec-status.on i{background:#FF3B5C;animation:blink 1.2s ease-in-out infinite}
 @keyframes blink{50%{opacity:.3}}
-#stage.replaying .hud-top,#stage.replaying #hint,#stage.replaying #talk{display:none}
+#stage.replaying .hud-top,#stage.replaying #hint,#stage.replaying #talk,#stage.replaying #chatBar{display:none}
+#chatBar{position:absolute;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center}
+#chatBar[hidden],#talk:not([hidden])~#chatBar{display:none}
+#chatIn{flex:1;min-width:0;border:none;border-radius:999px;background:rgba(255,253,247,.96);padding:10px 16px;font-family:var(--f-display);font-size:23px;color:var(--ink);box-shadow:0 3px 0 rgba(120,95,60,.18),0 6px 16px rgba(60,45,25,.12)}
+#chatIn::placeholder{color:var(--ink-soft)}
+#chatGo{flex:none;border:none;border-radius:999px;background:var(--berry);color:#fff;font-family:var(--f-display);font-size:23px;padding:10px 18px;box-shadow:0 3px 0 var(--berry-dk)}
+#chatGo:disabled{opacity:.5}
 .replay-ui{position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 .rp-bar{pointer-events:auto;display:flex;align-items:center;gap:8px;width:100%;max-width:440px;box-sizing:border-box;background:rgba(255,255,255,.95);border-radius:14px;padding:6px 8px 6px 12px;box-shadow:0 4px 14px rgba(40,30,80,.18)}
 .rp-clock{font-family:var(--f-display);font-size:28px;color:var(--berry-dk);font-variant-numeric:tabular-nums;min-width:3.2em}
@@ -360,6 +366,7 @@ body,button,input,textarea{line-height:1.05}
     <div id="stampFx" hidden></div>
     <div id="hint">화면을 탭하면 걸어가요 · 끌어서 둘러보기</div>
     <button id="talk" hidden><span class="who"></span><div class="say"></div><span class="next">탭해서 계속 ▾</span></button>
+    <form id="chatBar" hidden autocomplete="off"><input type="text" id="chatIn" maxlength="30" placeholder="한마디 하기" aria-label="한마디 하기" enterkeyhint="send"><button id="chatGo" type="submit" disabled>보내기</button></form>
   </div>
   <aside id="side">
     <div class="side-brand"><h2>BluberryKisses</h2><p>우리 결혼식에 와준 하객들의 작은 마을</p></div>
@@ -802,6 +809,7 @@ function subscribe(){
 function upsertOther(id,v){if(replay&&savedOthers){const keep=others;others=savedOthers;try{return upsertOther(id,v)}finally{others=keep}}const n=normMe(v);const p=clampTier({x:n.x,y:n.y},tierOf(n.y));let o=others.get(id);
   if(!o){o={id,x:p.x,y:p.y,dir:'down',phase:0,moving:false,path:[],seed:Math.random()*9};others.set(id,o)}
   else if(Math.hypot(o.tx-p.x,o.ty-p.y)>2){o.path=route(o,p)}
+  {const ch=v&&v.chat;if(ch&&typeof ch.t==='string'&&+ch.at>(o.chatAt||0)){const fresh=!o.chatAt?Date.now()-ch.at<15000:true;o.chatAt=+ch.at;if(fresh&&!replay){bubbles=bubbles.filter(b=>b.who!==o);bubbles.push({who:o,text:ch.t.slice(0,30),until:performance.now()+5000,chat:true})}}}
   Object.assign(o,{name:n.name,look:n.look,msg:n.msg,stamps:n.stamps,cake:n.cake,enteredAt:n.enteredAt,entered:n.entered,tx:p.x,ty:p.y,updatedAt:+v.updatedAt||0,demo:false})}
 
 /* ---------- demo guests (only while the village is nearly empty) ---------- */
@@ -897,9 +905,10 @@ function tagColor(name){let h=0;for(const ch of String(name))h=(h*31+ch.charCode
 function nameTag(c,x,y,name,mine,demo,host){c.font='700 16px '+UI_FONT;const label=demo?name+' · 예시':name;const w=c.measureText(label).width+14;
   const col=tagColor(name);c.fillStyle=col;rr(c,x-w/2,y+5,w,16,3.5);c.fill();if(mine){c.strokeStyle='#FFFDF7';c.lineWidth=1.6;c.stroke()}
   c.fillStyle=lum(col)>.62?'#2A2440':'#FFFFFF';c.textAlign='center';c.textBaseline='middle';c.fillText(label,x,y+14)}
-function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const t=text.length>18?text.slice(0,17)+'…':text;const w=c.measureText(t).width+20;const bx=x-w/2,by=y-92;
-  c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,24,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+23);c.lineTo(x,by+30);c.lineTo(x+5,by+23);c.closePath();c.fill();
-  c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';c.fillText(t,x,by+12.5)}
+function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const L=[];let cur='';for(const ch of String(text)){if(c.measureText(cur+ch).width>150){L.push(cur);cur=ch;if(L.length===2)break}else cur+=ch}if(L.length<2&&cur)L.push(cur);else if(L.length===2&&cur&&L.join('').length<String(text).length)L[1]=L[1].slice(0,-1)+'…';
+  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=x-w/2,by=y-92-extra;
+  const bh=24+extra;c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,bh,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+bh-1);c.lineTo(x,by+bh+6);c.lineTo(x+5,by+bh-1);c.closePath();c.fill();
+  c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';L.forEach((l,i)=>c.fillText(l,x,by+12.5+i*18))}
 
 /* ---------- input ---------- */
 let pd=null;
@@ -1203,7 +1212,15 @@ function openWelcome(name,look){const w=$('#welcome'),i=$('#wlName'),go=$('#wlGo
     i.blur();w.hidden=true;openCreator(look,nm,true)}}
 $('#wlName').addEventListener('input',()=>{$('#wlGo').disabled=!$('#wlName').value.trim()});
 
-function enterVillage(){inVillage=true;player.x=me.x;player.y=me.y;const sp=clampTier(player,tierOf(player.y));player.x=sp.x;player.y=sp.y;camY=clampCam(player.y-viewH*.56);
+/* ---------- chat (short line above my character for 5 s) ---------- */
+let lastChatAt=0;
+$('#chatIn').addEventListener('input',()=>{$('#chatGo').disabled=!$('#chatIn').value.trim()});
+$('#chatBar').addEventListener('submit',e=>{e.preventDefault();const i=$('#chatIn');const t=i.value.trim().slice(0,30);if(!t||!inVillage||!me)return;
+  const now=Date.now();if(now-lastChatAt<1200)return;lastChatAt=now;
+  bubbles=bubbles.filter(b=>b.who!==player);bubbles.push({who:player,text:t,until:performance.now()+5000,chat:true});
+  persist({chat:{t,at:now},updatedAt:now});i.value='';$('#chatGo').disabled=true;i.blur()});
+
+function enterVillage(){inVillage=true;$('#chatBar').hidden=false;player.x=me.x;player.y=me.y;const sp=clampTier(player,tierOf(player.y));player.x=sp.x;player.y=sp.y;camY=clampCam(player.y-viewH*.56);
   persist(fullDoc());refreshPanels();if(afterEnter){const f=afterEnter;afterEnter=null;setTimeout(f,900)}setTimeout(()=>{const h=$('#hint');if(h.style.opacity!=='0')h.style.opacity=0},9000)}
 
 let lastSaved={x:0,y:0};
