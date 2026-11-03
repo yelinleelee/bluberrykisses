@@ -476,7 +476,7 @@ body,button,input,textarea{line-height:1.05}
 (()=>{
 "use strict";
 const $=s=>document.querySelector(s);
-const W=480,H=849,CS=1.08,ZOOM=1.2;
+const W=480,H=1379,VH=849,CS=.9,ZOOM=1.2;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- seeded random ---------- */
@@ -484,10 +484,10 @@ function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a
 let rng=mulberry32(7);const R=(a,b)=>a+rng()*(b-a);const pick=a=>a[Math.floor(Math.random()*a.length)];
 
 /* ---------- world geometry ---------- */
-/* walkable bands traced from the painted map (map.webp, 480 x 849 world units) */
-const TIERS=[{y0:132,y1:252,x0:40,x1:440},{y0:326,y1:476,x0:30,x1:450},{y0:556,y1:648,x0:40,x1:440},{y0:742,y1:772,x0:30,x1:450}];
-const STAIRS=[{top:{x:240,y:262},bot:{x:240,y:326}},{top:{x:240,y:482},bot:{x:240,y:556}},{top:{x:238,y:654},bot:{x:238,y:742}}];
-const tierOf=y=>y<290?0:y<516?1:y<698?2:3;
+/* walkable bands traced from the painted map (map.webp, 480 x 1379 world units) */
+const TIERS=[{y0:132,y1:252,x0:40,x1:440},{y0:326,y1:476,x0:30,x1:450},{y0:556,y1:648,x0:40,x1:440},{y0:742,y1:1196,x0:46,x1:434},{y0:1278,y1:1296,x0:50,x1:390}];
+const STAIRS=[{top:{x:240,y:262},bot:{x:240,y:326}},{top:{x:240,y:482},bot:{x:240,y:556}},{top:{x:238,y:654},bot:{x:238,y:742}},{top:{x:238,y:1204},bot:{x:238,y:1278}}];
+const tierOf=y=>y<290?0:y<516?1:y<698?2:y<1238?3:4;
 function clampTier(p,t){const T=TIERS[t];return{x:Math.max(T.x0,Math.min(T.x1,p.x)),y:Math.max(T.y0,Math.min(T.y1,p.y))}}
 function route(from,to){const a=tierOf(from.y),b=tierOf(to.y);const pts=[];
   if(a<b){for(let i=a;i<b;i++){pts.push(STAIRS[i].top,STAIRS[i].bot)}}
@@ -775,7 +775,7 @@ const DECOR=[];
 const CAKE=new Image();CAKE.decoding='async';CAKE.src='assets/cake.webp';
 DECOR.push({type:'cake2',x:240,y:452,w:196});
 /* cake table footprint: feet can't enter */
-const BLOCKS=[{x0:146,x1:334,y0:398,y1:454}];
+const BLOCKS=[{x0:146,x1:334,y0:398,y1:454},{x0:38,x1:122,y0:820,y1:882},{x0:384,x1:472,y0:938,y1:1000}];
 const blocked=(x,y)=>BLOCKS.some(b=>x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1);
 
 /* ---------- state ---------- */
@@ -844,7 +844,7 @@ function clearDemo(){for(const [id,o] of others)if(o.demo)others.delete(id);demo
 const stage=$('#stage'),cv=$('#cv'),ctx=cv.getContext('2d');
 let dpr=1,scale=1,viewH=800;
 function resize(){dpr=Math.min(2,window.devicePixelRatio||1);const r=stage.getBoundingClientRect();cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));
-  scale=Math.max(r.width/W,r.height/H)*(replay?1:ZOOM);viewH=r.height/scale;viewW=r.width/scale}
+  scale=Math.max(r.width/W,r.height/VH)*(replay?1:ZOOM);viewH=r.height/scale;viewW=r.width/scale}
 window.addEventListener('resize',resize);
 const clampCam=y=>Math.max(0,Math.min(Math.max(0,H-viewH),y));
 const clampCamX=x=>Math.max(0,Math.min(Math.max(0,W-viewW),x));
@@ -867,6 +867,10 @@ function update(dt,t,ts){
   if(replay){stepReplay(dt);camY=clampCam(camY);{const tx=clampCamX(W/2-viewW/2);camX+=(tx-camX)*Math.min(1,dt*4)}const now=performance.now();bubbles=bubbles.filter(b=>b.until>now);return}
   if(inVillage){const arrived=stepMover(player,dt,150);
     if(arrived&&player.action){const a=player.action;player.action=null;player.dir=a==='photo'?'down':'up';doAction(a)}}
+  for(const o of others.values()){if(o.moving||o.path.length)continue;let fx=0,fy=0;
+    const push=(qx,qy)=>{const dx=o.x-qx,dy=o.y-qy,d=(dx/SEP_X)**2+(dy/SEP_Y)**2;if(d<1){const l=Math.hypot(dx,dy)||1,w=1-d;fx+=(dx||(Math.random()-.5))/l*w;fy+=(dy||(Math.random()-.5))/l*w*.5}};
+    for(const q of others.values())if(q!==o)push(q.x,q.y);for(const c of couple)push(c.x,c.y);if(inVillage)push(player.x,player.y);
+    if(fx||fy){const n=clampTier({x:o.x+fx*dt*36,y:o.y+fy*dt*36},tierOf(o.y));if(!blocked(n.x,n.y)){o.x=n.x;o.y=n.y}}}
   for(const o of others.values()){stepMover(o,dt,o.demo?60:110);
     if(o.demo&&ts>o.wanderAt&&!o.path.length){const t2=tierOf(o.y),T=TIERS[t2];o.path=route(o,{x:R(T.x0,T.x1),y:R(T.y0,T.y1)});o.wanderAt=ts+R(4000,9000)}}
   if(inVillage&&performance.now()-lastDragAt>2200){const tgt=clampCam(player.y-viewH*.56);camY+=(tgt-camY)*Math.min(1,dt*4)}
@@ -925,7 +929,7 @@ function nameTag(c,x,y,name,mine,demo,host){c.font='700 16px '+UI_FONT;const lab
   const col=host?tagColor(name==='진배'?'신랑':'신부'):tagColor(name);c.fillStyle=col;rr(c,x-w/2,y+5,w,16,3.5);c.fill();if(mine){c.strokeStyle='#FFFDF7';c.lineWidth=1.6;c.stroke()}
   c.fillStyle=lum(col)>.62?'#2A2440':'#FFFFFF';c.textAlign='center';c.textBaseline='middle';c.fillText(label,x,y+14)}
 function bubble(c,x,y,text){c.font='700 18px '+UI_FONT;const L=[];let cur='';for(const ch of String(text)){if(c.measureText(cur+ch).width>150){L.push(cur);cur=ch;if(L.length===2)break}else cur+=ch}if(L.length<2&&cur)L.push(cur);else if(L.length===2&&cur&&L.join('').length<String(text).length)L[1]=L[1].slice(0,-1)+'…';
-  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=Math.max(camX+4,Math.min(camX+viewW-w-4,x-w/2)),by=y-100-extra;
+  const extra=(L.length-1)*18;const t=L[0];const w=Math.max(...L.map(l=>c.measureText(l).width))+20;const bx=Math.max(camX+4,Math.min(camX+viewW-w-4,x-w/2)),by=y-84-extra;
   const bh=24+extra;c.fillStyle='#FFFDF7';c.strokeStyle='#EADFCB';c.lineWidth=1.5;rr(c,bx,by,w,bh,12);c.fill();c.stroke();c.beginPath();c.moveTo(x-5,by+bh-1);c.lineTo(x,by+bh+6);c.lineTo(x+5,by+bh-1);c.closePath();c.fill();
   c.fillStyle='#5B4A3E';c.textAlign='center';c.textBaseline='middle';L.forEach((l,i)=>c.fillText(l,x,by+12.5+i*18))}
 
@@ -939,9 +943,17 @@ cv.addEventListener('pointercancel',()=>pd=null);
 cv.addEventListener('wheel',e=>{e.preventDefault();camY=clampCam(camY+e.deltaY/scale);lastDragAt=performance.now()},{passive:false});
 function onTap(x,y){if(!inVillage||!$('#talk').hidden)return;hideHint();lastDragAt=0;
   for(const [k,s] of Object.entries(SPOTS)){if(Math.hypot(x-s.x,(y-s.y)*1.3)<s.r||(s.mark&&Math.hypot(x-s.mark.x,y-s.mark.y)<18)){goTo(s.stand,k);return}}
-  for(const o of others.values()){if(Math.abs(x-o.x)<15&&y<o.y+5&&y>o.y-52){bubbles=bubbles.filter(b=>b.who!==o);bubbles.push({who:o,text:o.msg||(o.name+'님이에요'),until:performance.now()+4200});return}}
+  for(const o of others.values()){if(Math.abs(x-o.x)<12&&y<o.y+4&&y>o.y-42){bubbles=bubbles.filter(b=>b.who!==o);bubbles.push({who:o,text:o.msg||(o.name+'님이에요'),until:performance.now()+4200});return}}
   goTo({x,y},null)}
-function goTo(p,action){if(blocked(p.x,p.y)){const b=BLOCKS.find(b=>p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1);p={x:p.x,y:p.y<(b.y0+b.y1)/2?b.y0-2:b.y1+4}}player.path=route(player,p);player.action=action;const last=player.path[player.path.length-1];tapFx={x:last.x,y:last.y,at:performance.now()};
+/* keep feet apart: characters overlap when (dx/SEP_X)^2+(dy/SEP_Y)^2 < 1 */
+const SEP_X=26*CS,SEP_Y=13*CS;
+function crowdAt(x,y,self){let n=0;const chk=(qx,qy)=>{const d=((x-qx)/SEP_X)**2+((y-qy)/SEP_Y)**2;if(d<1)n+=1-d};
+  for(const o of others.values()){if(o===self)continue;chk(o.tx!=null&&!o.path.length?o.x:(o.tx??o.x),o.tx!=null&&!o.path.length?o.y:(o.ty??o.y))}
+  for(const c of couple)chk(c.x,c.y);if(self!==player&&inVillage)chk(player.x,player.y);return n}
+function freeSpot(p,self){const t=tierOf(p.y);if(crowdAt(p.x,p.y,self)===0)return p;let best=p,bv=crowdAt(p.x,p.y,self);
+  for(let ring=1;ring<=7;ring++)for(let k=0;k<ring*8;k++){const a=k/(ring*8)*Math.PI*2,q=clampTier({x:p.x+Math.cos(a)*ring*SEP_X*.55,y:p.y+Math.sin(a)*ring*SEP_Y*.55},t);
+    if(blocked(q.x,q.y))continue;const v=crowdAt(q.x,q.y,self);if(v===0)return q;if(v<bv){bv=v;best=q}}return best}
+function goTo(p,action){if(blocked(p.x,p.y)){const b=BLOCKS.find(b=>p.x>b.x0&&p.x<b.x1&&p.y>b.y0&&p.y<b.y1);p={x:p.x,y:p.y<(b.y0+b.y1)/2?b.y0-2:b.y1+4}}p=freeSpot(clampTier(p,tierOf(p.y)),player);player.path=route(player,p);player.action=action;const last=player.path[player.path.length-1];tapFx={x:last.x,y:last.y,at:performance.now()};
   if(!action&&!player.path.length)player.moving=false}
 let hintTimer;function hideHint(){$('#hint').style.opacity=0}
 
@@ -1292,7 +1304,7 @@ $('#crRandom').addEventListener('click',()=>{crLook=randomLook();renderOpts()});
 $('#crDone').addEventListener('click',()=>{const nm=$('#nameIn').value.trim().slice(0,10);const f=$('#nameField');
   if(!nm){f.classList.remove('err');void f.offsetWidth;f.classList.add('err');$('#nameIn').focus();return}
   $('#creator').hidden=true;
-  if(crFirst||!me){let sp=clampTier({x:240+R(-90,90),y:432+R(-26,30)},1);if(blocked(sp.x,sp.y))sp={x:sp.x,y:472};me={name:nm,look:crLook,x:sp.x,y:sp.y,msg:'',stamps:{book:false,film:false,cheers:false},cake:false,entered:false,enteredAt:0};
+  if(crFirst||!me){const nUp=[...others.values()].filter(o=>tierOf(o.y)===1).length;let sp=nUp<24?clampTier({x:240+R(-90,90),y:432+R(-26,30)},1):clampTier({x:R(90,390),y:R(770,1150)},3);if(blocked(sp.x,sp.y))sp={x:sp.x,y:sp.y<700?472:sp.y+70};sp=freeSpot(sp,player);me={name:nm,look:crLook,x:sp.x,y:sp.y,msg:'',stamps:{book:false,film:false,cheers:false},cake:false,entered:false,enteredAt:0};
     enterVillage();toast('결혼 파티에 와주셔서 감사해요!')}
   else{me.name=nm;me.look=crLook;persist({name:nm,look:crLook,updatedAt:Date.now()});toast('새 모습으로 갈아입었어요')}
   refreshPanels()});
