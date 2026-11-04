@@ -851,7 +851,8 @@ function subscribe(){
     let myAt=0;try{myAt=+localStorage.getItem('bk-me-at')||0}catch(e){}
     if((v.all||ids.has(String(uid)))&&+v.at>myAt&&(me||ownExists)&&!isOwner){try{localStorage.removeItem(LS);localStorage.removeItem('bk-me-at')}catch(e){}ownExists=false;me=null;toast('호스트가 마을을 새로 정리했어요');setTimeout(()=>location.reload(),1400)}},e=>console.warn('purge',e&&e.code));
   db.doc('event/draw').onSnapshot(s=>{if(!s.exists)return;const v=s.data();const prev=lastDraw;lastDraw=v;
-    if(prev&&prev.at===v.at)return;if(v.cancelled||v.reset){if(!$('#drawOv').hidden&&!isOwner){closeDraw();toast('추첨이 취소됐어요')}refreshPanels();return}if(v.at>bootAt-5000&&(!prev||v.at>prev.at))showDraw(v);refreshPanels()},e=>console.warn('draw',e&&e.code));
+    if(prev&&prev.at===v.at)return;if(v.stage==='ready'){if(!isOwner&&v.at>bootAt-5000)showReady(v.count||12,{});refreshPanels();return}
+    if(v.cancelled||v.reset){if(!$('#drawOv').hidden&&!isOwner){closeDraw();toast('추첨이 취소됐어요')}refreshPanels();return}if(v.at>bootAt-5000&&(!prev||v.at>prev.at))showDraw(v);refreshPanels()},e=>console.warn('draw',e&&e.code));
   db.doc('event/recording').onSnapshot(s=>{const v=s.exists?s.data():null;if(isOwner&&v&&v.on&&!recOn)startRec(true)},e=>console.warn('rec',e&&e.code));
   db.doc('event/moderation').onSnapshot(s=>{const v=s.exists?s.data():{};hiddenMsgs=new Set(Array.isArray(v.hidden)?v.hidden.map(String):[]);refreshPanels()},e=>console.warn('mod',e&&e.code))}
 let inRedirect=false;
@@ -1217,7 +1218,7 @@ function openLucky(){const b=document.createElement('div');const box=document.cr
   const c=drawCandidates();const info=document.createElement('p');info.className='note';info.textContent=`지금까지 응모한 하객 ${c.length}명`;b.appendChild(info);
   if(lastDraw&&lastDraw.winnerName&&!lastDraw.cancelled&&!lastDraw.reset){const w=document.createElement('p');w.className='note';w.textContent=`최근 당첨자: ${lastDraw.winnerName}`;b.appendChild(w)}
   if(isOwner||!shared){const host=document.createElement('div');host.style.marginTop='16px';host.style.textAlign='center';
-    const btn=document.createElement('button');btn.className='pill-btn';btn.textContent=shared?'추첨하기 (호스트 전용)':'테스트 추첨하기';btn.addEventListener('click',()=>runDraw(1,true));host.appendChild(btn);
+    const btn=document.createElement('button');btn.className='pill-btn';btn.textContent=shared?'추첨하기 (호스트 전용)':'테스트 추첨하기';btn.addEventListener('click',()=>prepareDraw(1,true));host.appendChild(btn);
     const nt=document.createElement('p');nt.className='note';nt.textContent=shared?'누르면 응모자 중 한 명을 뽑아 접속 중인 모든 하객 화면에 발표해요.':'저장소에 연결되지 않은 화면이라 이 기기에서만 뽑아요.';host.appendChild(nt);b.appendChild(host)}
   openModal('럭키드로우',b)}
 function drawHistory(){return lastDraw&&Array.isArray(lastDraw.history)?lastDraw.history:[]}
@@ -1287,9 +1288,11 @@ function gumDraw(t){if(!gum)return;const cv=$('#gumCv'),q=cv.getContext('2d'),k=
   if(gum.final&&gum.final.length>1){const n=gum.final.length,ch=70+n*58,cw=290,y=300;q.fillStyle='#FFFDF7';rr(q,200-cw/2,y-ch/2,cw,ch,18);q.fill();q.strokeStyle='#2A1F5C';q.lineWidth=4;q.stroke();
     q.fillStyle='#3F5BFF';q.font='700 24px '+UI_FONT;q.fillText(gum.test?'테스트 당첨':'축하해요!',200,y-ch/2+32);q.fillStyle='#2A1F5C';
     gum.final.forEach((nm,i)=>{let fs=48;q.font=`700 ${fs}px ${UI_FONT}`;while(q.measureText(nm).width>cw-40&&fs>26){fs-=4;q.font=`700 ${fs}px ${UI_FONT}`}q.fillText(nm,200,y-ch/2+78+i*58)})}}
+function gumIdle(count){if(gum&&gum.raf)cancelAnimationFrame(gum.raf);gumLayout();gum={balls:gumInit(count),knob:0,fly:null,final:null,idle:true,raf:0};let last=performance.now();
+  (function frame(now){if(!gum||!gum.idle)return;const dt=Math.min(.033,(now-last)/1000);last=now;gumStep(gum.balls,dt/2,false);gumStep(gum.balls,dt/2,false);gum.knob=Math.sin(now/600)*.08;gumDraw(now/1000);gum.raf=requestAnimationFrame(frame)})(last)}
 function gumRun(v,opt){const ws=(Array.isArray(v.winners)?v.winners:[]).map(w=>String(w.name).slice(0,10));if(!ws.length)return;
   if(gum&&gum.raf)cancelAnimationFrame(gum.raf);gumLayout();
-  gum={balls:gumInit(v.count||(v.pool||[]).length),knob:0,fly:null,final:null,test:!!(opt&&opt.test),raf:0};
+  gum={balls:gum&&gum.idle?gum.balls:gumInit(v.count||(v.pool||[]).length),knob:0,fly:null,final:null,test:!!(opt&&opt.test),raf:0};
   const plan=[];ws.forEach((nm,i)=>{const fast=ws.length>3;plan.push({k:'mix',dur:i?(fast?600:900):2300,nm},{k:'settle',dur:fast?250:350},{k:'drop',dur:fast?320:380},{k:'pop',dur:fast?480:600},{k:'open',dur:fast?480:600},{k:'show',dur:ws.length>1?(fast?850:1100):300})});
   let si=0,st=performance.now(),last=st;const res=$('#gumResult');res.hidden=true;
   const finish=()=>{if(ws.length>1){gum.fly=null;gum.final=ws}gumDraw(performance.now()/1000);opt&&opt.onDone&&opt.onDone()};
@@ -1313,18 +1316,30 @@ async function runDraw(n=1,exclude=true,test=false){const prevIds=new Set(drawHi
   if(test){showDraw(v,{test:true});return}
   v.history=[...drawHistory(),{at,winners}].slice(-30);
   if(shared&&isOwner){try{await db.doc('event/draw').set(v)}catch(e){toast('추첨 결과를 저장하지 못했어요. 다시 눌러주세요')}}else{lastDraw=v;showDraw(v);renderHost()}}
+/* step 1: show the machine and wait for the host to press 시작 */
+function drawTag(test){const tag=$('#gumTag');tag.textContent='BluberryKisses 럭키드로우';if(test){const b=document.createElement('span');b.className='gum-test';b.textContent='테스트';tag.appendChild(b)}}
+function showReady(count,opt){opt=opt||{};$('#drawOv').hidden=false;drawTag(opt.test);gumIdle(count);const res=$('#gumResult'),bt=$('#gumBtns');bt.replaceChildren();res.hidden=false;
+  $('#drawSub').textContent=opt.host?(opt.test?'테스트 추첨이에요. 시작을 누르면 뽑아요':`응모자 ${count}명 중 ${opt.n}명을 뽑아요`):'곧 추첨이 시작돼요!';
+  if(opt.host){const go=document.createElement('button');go.className='pill-btn';go.textContent='시작';go.addEventListener('click',()=>{bt.replaceChildren();res.hidden=true;opt.onStart()});
+    const no=document.createElement('button');no.className='pill-btn soft';no.textContent='취소';no.addEventListener('click',opt.onCancel);bt.append(no,go);setTimeout(()=>go.focus(),50)}}
+async function prepareDraw(n=1,exclude=true,test=false){const prevIds=new Set(drawHistory().flatMap(h=>(h.winners||[]).map(w=>w.id)));
+  let c=drawPool(test);if(exclude&&!test)c=c.filter(x=>!prevIds.has(x.id));
+  if(!c.length){toast(exclude&&drawCandidates().length?'뽑을 수 있는 응모자가 없어요. 이미 다 당첨됐어요':'아직 응모한 하객이 없어요');return}
+  closeModal();const live=!test&&shared&&isOwner;
+  showReady(c.length,{host:true,test,n:Math.min(n,c.length),onStart:()=>runDraw(n,exclude,test),onCancel:async()=>{closeDraw();if(live){try{await db.doc('event/draw').set({winners:[],cancelled:true,quiet:true,at:Date.now(),history:drawHistory()})}catch(e){}}}});
+  if(live){try{await db.doc('event/draw').set({winners:[],stage:'ready',at:Date.now(),count:c.length,n,history:drawHistory()})}catch(e){}}}
 async function cancelLastDraw(){const h=drawHistory().slice(0,-1);const v={winners:[],cancelled:true,at:Date.now(),history:h};closeDraw();
   if(shared&&isOwner){try{await db.doc('event/draw').set(v)}catch(e){toast('취소하지 못했어요. 다시 눌러주세요');return}}else{lastDraw=v;renderHost()}toast('이번 추첨을 취소했어요')}
 async function resetDraws(){const v={winners:[],reset:true,at:Date.now(),history:[]};
   if(shared&&isOwner){try{await db.doc('event/draw').set(v)}catch(e){toast('지우지 못했어요. 다시 눌러주세요');return}}else{lastDraw=v;renderHost()}toast('당첨 기록을 모두 지웠어요. 처음부터 다시 뽑을 수 있어요')}
 function closeDraw(){$('#drawOv').hidden=true;if(gum&&gum.raf)cancelAnimationFrame(gum.raf);gum=null}
-function showDraw(v,opt){opt=opt||{};const ov=$('#drawOv');ov.hidden=false;const tag=$('#gumTag');tag.textContent='BluberryKisses 럭키드로우';if(opt.test){const b=document.createElement('span');b.className='gum-test';b.textContent='테스트';tag.appendChild(b)}
+function showDraw(v,opt){opt=opt||{};const ov=$('#drawOv');ov.hidden=false;drawTag(opt.test);
   const ws=Array.isArray(v.winners)?v.winners:[];const myId=shared?uid:'me';const mine=!opt.test&&ws.some(w=>w.id===myId);const host=isOwner||!shared;
   gumRun(v,{test:opt.test,onDone:()=>{const res=$('#gumResult'),sub=$('#drawSub'),bt=$('#gumBtns');bt.replaceChildren();
     sub.textContent=opt.test?'테스트 추첨이에요. 저장되지 않고 이 화면에서만 보여요':mine?'축하해요, 당첨이에요! 신랑신부를 찾아가 주세요':'당첨을 축하해요!';
     const mk=(t,soft,fn)=>{const b=document.createElement('button');b.className='pill-btn'+(soft?' soft':'');b.textContent=t;b.addEventListener('click',fn);bt.appendChild(b);return b};
-    if(opt.test){mk('테스트 다시 해보기',true,()=>runDraw(v.n||1,true,true));mk('닫기',false,closeDraw)}
-    else if(host){mk('당첨자 빼고 다시 뽑기',true,()=>{closeDraw();runDraw(v.n||drawN,true)});mk('이번 추첨 취소',true,cancelLastDraw);mk('확인',false,closeDraw)}
+    if(opt.test){mk('테스트 다시 해보기',true,()=>prepareDraw(v.n||1,true,true));mk('닫기',false,closeDraw)}
+    else if(host){mk('당첨자 빼고 다시 뽑기',true,()=>{closeDraw();prepareDraw(v.n||drawN,true)});mk('이번 추첨 취소',true,cancelLastDraw);mk('확인',false,closeDraw)}
     else mk('확인',false,closeDraw);
     res.hidden=false}})}
 window.addEventListener('resize',()=>{if(gum&&!$('#drawOv').hidden){gumLayout();gumDraw(performance.now()/1000)}});
@@ -1375,8 +1390,8 @@ $('#hostJoin').addEventListener('click',()=>leaveSpectate());
 $('#hostClose').addEventListener('click',()=>{hostOpen=false;$('#host').hidden=true;if(!inVillage&&!spectating&&$('#creator').hidden)$('#welcome').hidden=false});
 let drawN=1;
 $('#drawN').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;drawN=+b.dataset.n;$('#drawN').querySelectorAll('button').forEach(x=>x.setAttribute('aria-checked',String(x===b)))});
-$('#hostDraw').addEventListener('click',()=>runDraw(drawN,$('#drawExclude').checked));
-$('#hostDrawTest').addEventListener('click',()=>runDraw(drawN,true,true));
+$('#hostDraw').addEventListener('click',()=>prepareDraw(drawN,$('#drawExclude').checked));
+$('#hostDrawTest').addEventListener('click',()=>prepareDraw(drawN,true,true));
 {let armed=0;$('#drawReset').addEventListener('click',e=>{const b=e.currentTarget;if(Date.now()-armed<4000){armed=0;b.textContent='전부 처음부터 다시하기';resetDraws();return}armed=Date.now();b.textContent='정말 지울까요? 한 번 더 누르기';setTimeout(()=>{if(armed&&Date.now()-armed>=4000){armed=0;b.textContent='전부 처음부터 다시하기'}},4100)})}
 $('#hostSearch').addEventListener('input',()=>renderHost());
 async function toggleHidden(id){const next=new Set(hiddenMsgs);next.has(id)?next.delete(id):next.add(id);
