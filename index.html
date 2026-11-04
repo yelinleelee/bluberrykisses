@@ -1103,7 +1103,7 @@ async function renderPolaroid(ph){const base=await loadImg(ph.url);const W=Math.
 async function renderSaveCard(ph){const card=await loadImg(await renderPolaroid(ph));const cw=card.naturalWidth,ch=card.naturalHeight,m=Math.round(cw*.11),W=cw+m*2,H=ch+m*2;
   const c=document.createElement('canvas');c.width=W;c.height=H;const q=c.getContext('2d');const MODE=window.__bgMode||'clear';const SOLID=MODE==='solid';if(MODE!=='clear'){q.fillStyle=SOLID?'#4E5DB5':'#C3CCF6';q.fillRect(0,0,W,H)}
   if(MODE==='dots'){q.fillStyle='rgba(255,255,255,.45)';const st=Math.round(W/16);for(let y=st/2,r=0;y<H;y+=st,r++)for(let x=(r%2?st:st/2);x<W;x+=st){q.beginPath();q.arc(x,y,st*.11,0,Math.PI*2);q.fill()}}
-  q.save();q.translate(W/2,H/2);q.rotate(-1.6*Math.PI/180);q.shadowColor=MODE==='clear'?'rgba(42,31,92,.38)':'rgba(42,31,92,.28)';q.shadowBlur=m*.35;q.shadowOffsetY=m*.12;q.drawImage(card,-cw/2,-ch/2);q.restore();
+  q.save();q.translate(W/2,H/2);q.shadowColor=MODE==='clear'?'rgba(42,31,92,.38)':'rgba(42,31,92,.28)';q.shadowBlur=m*.35;q.shadowOffsetY=m*.12;q.drawImage(card,-cw/2,-ch/2);q.restore();
   return MODE==='clear'?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.92)}
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
 async function storePhoto(ph){if(shared&&uid){try{await db.collection('data/users/'+uid).doc('photo-'+ph.at).set(ph);return}catch(e){}}
