@@ -807,7 +807,7 @@ const DECOR=[];
 const CAKE=new Image();CAKE.decoding='async';CAKE.src='assets/cake.webp';
 const PILLAR=new Image();PILLAR.decoding='async';PILLAR.src='assets/pillar.webp';
 /* flower pillars framing the couple */
-const PILLARS=[{x:170,y:452},{x:310,y:452},{x:186,y:404},{x:294,y:404}].slice(0,window.__pillars||4);
+const PILLARS=[{x:170,y:452},{x:310,y:452}];
 for(const q of PILLARS)DECOR.push({type:'pillar',x:q.x,y:q.y,h:q.y<430?84:96});
 DECOR.push({type:'cake2',x:240,y:968,w:196});
 /* cake table footprint: feet can't enter */
