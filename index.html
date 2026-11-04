@@ -1102,7 +1102,7 @@ async function renderPolaroid(ph){const base=await loadImg(ph.url);const W=Math.
 /* the polaroid laid on a soft blueberry backdrop, so its white frame stands out in the phone's gallery */
 async function renderSaveCard(ph){const card=await loadImg(await renderPolaroid(ph));const cw=card.naturalWidth,ch=card.naturalHeight,m=Math.round(cw*.11),W=cw+m*2,H=ch+m*2;
   const c=document.createElement('canvas');c.width=W;c.height=H;const q=c.getContext('2d');q.fillStyle='#C3CCF6';q.fillRect(0,0,W,H);
-  q.fillStyle='rgba(255,255,255,.45)';const st=Math.round(W/16);for(let y=st/2,r=0;y<H;y+=st,r++)for(let x=(r%2?st:st/2);x<W;x+=st){q.beginPath();q.arc(x,y,st*.11,0,Math.PI*2);q.fill()}
+  q.fillStyle='rgba(255,255,255,.45)';const st=Math.round(W/9);for(let y=st/2,r=0;y<H+st;y+=st,r++)for(let x=(r%2?st:st/2);x<W+st;x+=st){q.beginPath();q.arc(x,y,st*.2,0,Math.PI*2);q.fill()}
   q.save();q.translate(W/2,H/2);q.rotate(-1.6*Math.PI/180);q.shadowColor='rgba(42,31,92,.28)';q.shadowBlur=m*.35;q.shadowOffsetY=m*.12;q.drawImage(card,-cw/2,-ch/2);q.restore();
   return c.toDataURL('image/jpeg',.92)}
 function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src})}
