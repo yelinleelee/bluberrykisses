@@ -805,9 +805,13 @@ function buildGround(){G=new Image();G.decoding='async';G.src='assets/map.webp?v
 /* ---------- decor (depth-sorted sprites) ---------- */
 const DECOR=[];
 const CAKE=new Image();CAKE.decoding='async';CAKE.src='assets/cake.webp';
+const PILLAR=new Image();PILLAR.decoding='async';PILLAR.src='assets/pillar.webp';
+/* flower pillars framing the couple */
+const PILLARS=[{x:170,y:452},{x:310,y:452},{x:186,y:404},{x:294,y:404}].slice(0,window.__pillars||4);
+for(const q of PILLARS)DECOR.push({type:'pillar',x:q.x,y:q.y,h:q.y<430?84:96});
 DECOR.push({type:'cake2',x:240,y:968,w:196});
 /* cake table footprint: feet can't enter */
-const BLOCKS=[{x0:146,x1:334,y0:914,y1:970},{x0:38,x1:122,y0:820,y1:882},{x0:384,x1:472,y0:938,y1:1000}];
+const BLOCKS=[...(typeof PILLARS!=='undefined'?PILLARS:[]).map(q=>({x0:q.x-11,x1:q.x+11,y0:q.y-9,y1:q.y+2})),{x0:146,x1:334,y0:914,y1:970},{x0:38,x1:122,y0:820,y1:882},{x0:384,x1:472,y0:938,y1:1000}];
 const blocked=(x,y)=>BLOCKS.some(b=>x>b.x0&&x<b.x1&&y>b.y0&&y<b.y1);
 
 /* ---------- state ---------- */
@@ -935,6 +939,7 @@ function render(t){const c=renderCtx||ctx;c.setTransform(dpr*scale,0,0,dpr*scale
   for(const d of list){switch(d.type){
     case'tree':drawTree(c,d.x,d.y,d.k,d.s);break;case'bench':drawBench(c,d.x,d.y);break;case'arch':drawArch(c,d.x,d.y,t);break;
     case'board':drawBoard(c,d.x,d.y);break;case'frame':drawFrame(c,d.x,d.y);break;case'cart':drawCart(c,d.x,d.y);break;case'bush':drawBush(c,d.x,d.y,d.b);break;
+    case'pillar':if(PILLAR.complete&&PILLAR.naturalWidth){const w=d.h*PILLAR.naturalWidth/PILLAR.naturalHeight;ell(c,d.x,d.y-2,w*.42,4,'rgba(90,70,40,.18)');c.drawImage(PILLAR,d.x-w/2,d.y-d.h,w,d.h)}break;
     case'cake2':if(CAKE.complete&&CAKE.naturalWidth){const h=d.w*CAKE.naturalHeight/CAKE.naturalWidth;ell(c,d.x,d.y-4,d.w*.5,7,'rgba(90,70,40,.16)');c.drawImage(CAKE,d.x-d.w/2,d.y-h,d.w,h)}break;
     case'chair':drawChair(c,d.x,d.y,d.rib);break;case'hedge':drawHedge(c,d.x,d.y,d.w,d.h);break;case'bloom':drawBloom(c,d.x,d.y);break;case'lamp':drawLamp(c,d.x,d.y,t);break;
     case'cake':drawCake(c,d.x,d.y);break;case'easel':drawEasel(c,d.x,d.y);break;case'gazebo':drawGazebo(c,d.x,d.y);break;case'urn':drawUrn(c,d.x,d.y);break;
