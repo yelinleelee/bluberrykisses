@@ -262,6 +262,11 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .gum-confetti{position:fixed;inset:0;overflow:hidden;pointer-events:none}
 .gum-confetti i{animation-name:gumFall!important;animation-timing-function:ease-in!important}
 @keyframes gumFall{0%{transform:translateY(0) rotate(0);opacity:1}85%{opacity:1}100%{transform:translateY(105vh) rotate(540deg);opacity:0}}
+#liveBadge{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:36;display:flex;align-items:center;gap:7px;background:rgba(30,22,60,.82);color:#fff;border-radius:999px;padding:4px 14px 4px 10px;font-family:var(--f-display);font-size:20px;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+#liveBadge[hidden]{display:none}
+#liveBadge.in-host{left:auto;right:64px;transform:none;top:calc(16px + env(safe-area-inset-top,0px))}
+#liveBadge i{width:10px;height:10px;border-radius:50%;background:#FF3B4E;animation:liveDot 1.2s ease-in-out infinite}
+@keyframes liveDot{50%{opacity:.25}}
 .gum-test{background:#2A1F5C;color:#fff;border-radius:999px;padding:0 10px;font-size:20px;margin-left:6px}
 
 /* timelapse */
@@ -461,6 +466,7 @@ body,button,input,textarea{line-height:1.05}
   </div>
 </div>
 
+<div id="liveBadge" hidden><i></i><span>LIVE</span></div>
 <div class="ov" id="drawOv" hidden>
   <div class="gum-wrap">
     <p class="gum-eyebrow" id="gumTag">BluberryKisses 럭키드로우</p>
@@ -853,7 +859,7 @@ function subscribe(){
   db.doc('event/draw').onSnapshot(s=>{if(!s.exists)return;const v=s.data();const prev=lastDraw;lastDraw=v;
     if(prev&&prev.at===v.at)return;if(v.stage==='ready'){if(!isOwner&&v.at>bootAt-5000)showReady(v.count||12,{});refreshPanels();return}
     if(v.cancelled||v.reset){if(!$('#drawOv').hidden&&!isOwner){closeDraw();toast('추첨이 취소됐어요')}refreshPanels();return}if(v.at>bootAt-5000&&(!prev||v.at>prev.at))showDraw(v);refreshPanels()},e=>console.warn('draw',e&&e.code));
-  db.doc('event/recording').onSnapshot(s=>{const v=s.exists?s.data():null;if(isOwner&&v&&v.on&&!recOn)startRec(true)},e=>console.warn('rec',e&&e.code));
+  db.doc('event/recording').onSnapshot(s=>{const v=s.exists?s.data():null;recRemote=!!(v&&v.on);let mine=false;try{mine=localStorage.getItem('bk-rec-mine')==='1'}catch(e){}if(isOwner&&v&&v.on&&!recOn&&mine)startRec(true);updateLive()},e=>console.warn('rec',e&&e.code));
   db.doc('event/moderation').onSnapshot(s=>{const v=s.exists?s.data():{};hiddenMsgs=new Set(Array.isArray(v.hidden)?v.hidden.map(String):[]);refreshPanels()},e=>console.warn('mod',e&&e.code))}
 let inRedirect=false;
 function upsertOther(id,v){if(replay&&savedOthers&&!inRedirect){const keep=others;others=savedOthers;inRedirect=true;try{return upsertOther(id,v)}finally{others=keep;inRedirect=false}}const n=normMe(v);const p=clampTier({x:n.x,y:n.y},tierOf(n.y));let o=others.get(id);
@@ -1352,19 +1358,21 @@ function fmtTime(t){if(!t)return'';const d=new Date(t);return`${d.getHours()}:${
 let recOn=false,recTimer=null,recStart=0,recCount=0,localSnaps=[],wakeLock=null;
 function snapNow(){const g=[...(savedOthers||others).values()].filter(o=>!o.demo).map(o=>({i:o.id,n:o.name,x:Math.round(o.tx??o.x),y:Math.round(o.ty??o.y),l:o.look,m:o.msg&&!hiddenMsgs.has(o.id)?o.msg:'',c:o.cake?1:0}));
   if(me&&inVillage)g.push({i:shared?uid:'me',n:me.name,x:Math.round(player.x),y:Math.round(player.y),l:me.look,m:me.msg||'',c:me.cake?1:0});return{at:Date.now(),g}}
-async function recTick(){const s=snapNow();recCount++;if(shared&&isOwner){try{await db.collection('replay').doc(String(s.at)).set(s)}catch(e){console.warn('rec',e&&e.code)}}else localSnaps.push(s);renderHost()}
-async function startRec(fromStore){if(recOn)return;recOn=true;recStart=Date.now();recTick();recTimer=setInterval(recTick,60000);
+async function recTick(){const s=snapNow();recCount++;updateLive();if(shared&&isOwner){try{await db.collection('replay').doc(String(s.at)).set(s)}catch(e){console.warn('rec',e&&e.code)}}else localSnaps.push(s);renderHost()}
+let recRemote=false;
+function updateLive(){const b=$('#liveBadge');if(!b)return;const show=canHost()&&(recOn||recRemote)&&!replay;b.hidden=!show;b.classList.toggle('in-host',hostOpen);if(show)b.querySelector('span').textContent=recOn?`LIVE · ${recCount}장`:'LIVE · 다른 기기'}
+async function startRec(fromStore){if(recOn)return;try{localStorage.setItem('bk-rec-mine','1')}catch(e){}recOn=true;recStart=Date.now();recTick();recTimer=setInterval(recTick,60000);
   try{wakeLock=await navigator.wakeLock.request('screen')}catch(e){}
-  if(!fromStore&&shared&&isOwner){try{await db.doc('event/recording').set({on:true,startedAt:recStart})}catch(e){}}renderHost()}
-async function stopRec(){recOn=false;clearInterval(recTimer);recTimer=null;try{wakeLock&&wakeLock.release()}catch(e){}wakeLock=null;
-  if(shared&&isOwner){try{await db.doc('event/recording').set({on:false,stoppedAt:Date.now()})}catch(e){}}renderHost()}
+  if(!fromStore&&shared&&isOwner){try{await db.doc('event/recording').set({on:true,startedAt:recStart})}catch(e){}}renderHost();updateLive()}
+async function stopRec(){try{localStorage.removeItem('bk-rec-mine')}catch(e){}recOn=false;recRemote=false;clearInterval(recTimer);recTimer=null;try{wakeLock&&wakeLock.release()}catch(e){}wakeLock=null;
+  if(shared&&isOwner){try{await db.doc('event/recording').set({on:false,stoppedAt:Date.now()})}catch(e){}}renderHost();updateLive()}
 let replay=null,savedOthers=null;
 async function loadSnaps(){if(!shared)return localSnaps.slice();try{const q=await db.collection('replay').orderBy('at').limit(1000).get();return q.docs.map(d=>d.data()).filter(v=>v&&Array.isArray(v.g))}catch(e){return[]}}
 async function openReplay(){const snaps=await loadSnaps();if(snaps.length<2){toast('기록이 2장 이상 쌓여야 재생할 수 있어요');return}
   hostOpen=false;$('#host').hidden=true;const t0=snaps[0].at,t1=snaps[snaps.length-1].at;
   replay={snaps,t0,t1,dur:Math.min(180,Math.max(15,(t1-t0)/1000/80))*1000,el:0,playing:true,seen:new Map()};
-  savedOthers=others;others=new Map();inVillage=false;bubbles=[];$('#stage').classList.add('replaying');$('#replayUI').hidden=false;resize();$('#rpPlay').textContent='❚❚'}
-function closeReplay(){if(!replay)return;replay=null;resize();others=savedOthers;savedOthers=null;bubbles=[];inVillage=!!me;$('#stage').classList.remove('replaying');$('#replayUI').hidden=true;openHost()}
+  savedOthers=others;others=new Map();inVillage=false;bubbles=[];$('#stage').classList.add('replaying');$('#replayUI').hidden=false;resize();$('#rpPlay').textContent='❚❚';updateLive()}
+function closeReplay(){if(!replay)return;replay=null;setTimeout(updateLive,0);resize();others=savedOthers;savedOthers=null;bubbles=[];inVillage=!!me;$('#stage').classList.remove('replaying');$('#replayUI').hidden=true;openHost()}
 function stepReplay(dt){const r=replay;if(r.playing){r.el=Math.min(r.dur,r.el+dt*1000);if(r.el>=r.dur){r.playing=false;$('#rpPlay').textContent='▶'}}
   const T=r.t0+(r.el/r.dur)*(r.t1-r.t0);let k=0;while(k<r.snaps.length-2&&r.snaps[k+1].at<=T)k++;
   const A=r.snaps[k],B=r.snaps[k+1],f=Math.max(0,Math.min(1,(T-A.at)/Math.max(1,B.at-A.at)));const ia=new Map(A.g.map(g=>[g.i,g])),ib=new Map(B.g.map(g=>[g.i,g]));
@@ -1382,12 +1390,12 @@ $('#rpRestart').addEventListener('click',()=>{if(!replay)return;replay.el=0;repl
 $('#rpClose').addEventListener('click',closeReplay);
 $('#recToggle').addEventListener('click',()=>recOn?stopRec():startRec(false));
 $('#replayBtn').addEventListener('click',openReplay);
-function openHost(){if(!canHost())return;hostOpen=true;$('#host').hidden=false;renderHost();$('#hostClose').focus()}
+function openHost(){if(!canHost())return;hostOpen=true;$('#host').hidden=false;renderHost();updateLive();$('#hostClose').focus()}
 $('#hostBtn').addEventListener('click',openHost);
 $('#camBtn').addEventListener('click',()=>{if(inVillage&&$('#modal').hidden&&$('#talk').hidden)takePhoto()});
 $('#albumBtn').addEventListener('click',()=>{if(inVillage)openAlbum()});
 $('#hostJoin').addEventListener('click',()=>leaveSpectate());
-$('#hostClose').addEventListener('click',()=>{hostOpen=false;$('#host').hidden=true;if(!inVillage&&!spectating&&$('#creator').hidden)$('#welcome').hidden=false});
+$('#hostClose').addEventListener('click',()=>{hostOpen=false;$('#host').hidden=true;updateLive();if(!inVillage&&!spectating&&$('#creator').hidden)$('#welcome').hidden=false});
 let drawN=1;
 $('#drawN').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;drawN=+b.dataset.n;$('#drawN').querySelectorAll('button').forEach(x=>x.setAttribute('aria-checked',String(x===b)))});
 $('#hostDraw').addEventListener('click',()=>prepareDraw(drawN,$('#drawExclude').checked));
