@@ -248,7 +248,7 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .row.hidden-msg{opacity:.45}
 .mini-btn{border:none;background:var(--berry-soft);color:var(--berry-dk);border-radius:8px;padding:2px 10px;font-family:var(--f-display);font-size:20px;white-space:nowrap}
 .win-no{font-family:var(--f-display);font-size:22px;color:#fff;background:var(--berry);border-radius:8px;padding:0 8px;white-space:nowrap}
-#drawOv{background:#F2B53A url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");place-items:center;padding:16px}
+#drawOv{background:#BFC8F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");place-items:center;padding:16px}
 .gum-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;width:100%;max-width:560px}
 .gum-eyebrow{margin:0;font-family:var(--f-display);font-size:32px;color:#2A1F5C;letter-spacing:.02em}
 #gumCv{display:block}
@@ -522,7 +522,7 @@ function detour(pts,from){const out=[];let prev=from;for(const p of pts){const k
 
 const SPOTS={
   greet:{x:240,y:430,r:44,stand:{x:304,y:450},mark:{x:240,y:364}},
-  book:{x:89,y:362,r:36,stand:{x:104,y:404},mark:{x:89,y:316}},
+  book:{x:89,y:362,r:36,stand:{x:152,y:392},mark:{x:89,y:316}},
   cake:{x:240,y:934,r:62,stand:{x:240,y:984},mark:{x:240,y:846}},
   photo:{x:238,y:600,r:36,stand:{x:238,y:644},mark:{x:238,y:548}}
 };
@@ -890,7 +890,8 @@ function update(dt,t,ts){
   if(inVillage){const arrived=stepMover(player,dt,150);
     if(arrived&&player.action){const a=player.action;player.action=null;player.dir=a==='photo'?'down':'up';doAction(a)}}
   for(const o of others.values()){if(o.moving||o.path.length)continue;let fx=0,fy=0;
-    if(inCZ(o.x,o.y)){const dl=o.x-CZ.x0,dr=CZ.x1-o.x,dd=CZ.y1-o.y,m=Math.min(dl,dr,dd),st=40*dt;if(m===dd)o.y=Math.min(CZ.y1+1,o.y+st);else if(m===dl)o.x-=st;else o.x+=st;continue}
+    {const z=czAt(o.x,o.y);if(z){const c=[];if(z.ex.includes('l'))c.push(['l',o.x-z.x0]);if(z.ex.includes('r'))c.push(['r',z.x1-o.x]);if(z.ex.includes('d'))c.push(['d',z.y1-o.y]);const e=c.sort((a,b)=>a[1]-b[1])[0][0],st=40*dt;
+      if(e==='d')o.y=Math.min(z.y1+1,o.y+st);else if(e==='l')o.x=Math.max(z.x0-1,o.x-st);else o.x=Math.min(z.x1+1,o.x+st);continue}}
     const push=(qx,qy)=>{const dx=o.x-qx,dy=o.y-qy,d=(dx/SEP_X)**2+(dy/SEP_Y)**2;if(d<1){const l=Math.hypot(dx,dy)||1,w=1-d;fx+=(dx||(Math.random()-.5))/l*w;fy+=(dy||(Math.random()-.5))/l*w*.5}};
     for(const q of others.values())if(q!==o)push(q.x,q.y);for(const c of couple)push(c.x,c.y);if(inVillage)push(player.x,player.y);
     if(fx||fy){const n=clampTier({x:o.x+fx*dt*36,y:o.y+fy*dt*36},tierOf(o.y));if(!blocked(n.x,n.y)&&!inCZ(n.x,n.y)){o.x=n.x;o.y=n.y}}}
@@ -925,11 +926,12 @@ function render(t){const c=renderCtx||ctx;c.setTransform(dpr*scale,0,0,dpr*scale
     case'guest':drawCharO(c,d.o.x,d.o.y,d.o.look,{t,dir:d.o.dir,phase:d.o.phase,moving:d.o.moving,seed:d.o.seed,s:CS});break;
     case'me':drawCharO(c,player.x,player.y,me.look,{t,dir:player.dir,phase:player.phase,moving:player.moving,s:CS});break}}
   if(inVillage&&me&&!photoMode){if(!me.stamps.book)marker(c,SPOTS.book.mark.x,SPOTS.book.mark.y,t);if(!me.cake)marker(c,SPOTS.cake.mark.x,SPOTS.cake.mark.y,t);}
-  {const hx=(couple[0].x+couple[1].x)/2,hy=couple[0].y-64+Math.sin(t*2.4)*1.6,k=1+Math.sin(t*4.8)*.06;c.save();c.translate(hx,hy);c.scale(1.2*k,1.2*k);c.beginPath();c.moveTo(0,9);c.bezierCurveTo(-4,5.6,-10.5,1.4,-10.5,-3.8);c.bezierCurveTo(-10.5,-7.7,-7.7,-10.2,-5.1,-10.2);c.bezierCurveTo(-2.7,-10.2,-.8,-8.8,0,-6.7);c.bezierCurveTo(.8,-8.8,2.7,-10.2,5.1,-10.2);c.bezierCurveTo(7.7,-10.2,10.5,-7.7,10.5,-3.8);c.bezierCurveTo(10.5,1.4,4,5.6,0,9);c.closePath();c.lineJoin='round';c.lineWidth=3.2;c.strokeStyle='#FFFFFF';c.stroke();c.fillStyle='#4F7BFF';c.fill();c.beginPath();c.ellipse(-5.2,-5.4,2.2,1.4,-.7,0,Math.PI*2);c.fillStyle='rgba(255,255,255,.75)';c.fill();c.restore()}
-  for(const b of bubbles){const o=b.who;if(o===player)bubble(c,player.x,player.y,b.text);else if(others.has(o.id)||couple.includes(o))bubble(c,o.x,o.y,b.text)}
-  for(const p of couple)nameTag(c,p.x,p.y,p.name,false,false,true);
   for(const o of others.values())if(o.y>top&&o.y<bot)nameTag(c,o.x,o.y,o.name,false,o.demo);
   if(inVillage)nameTag(c,player.x,player.y,me.name,true);
+  for(const p of couple)drawCharO(c,p.x,p.y,p.look,{t,seed:p.x,s:CS});
+  {const hx=(couple[0].x+couple[1].x)/2,hy=couple[0].y-64+Math.sin(t*2.4)*1.6,k=1+Math.sin(t*4.8)*.06;c.save();c.translate(hx,hy);c.scale(1.2*k,1.2*k);c.beginPath();c.moveTo(0,9);c.bezierCurveTo(-4,5.6,-10.5,1.4,-10.5,-3.8);c.bezierCurveTo(-10.5,-7.7,-7.7,-10.2,-5.1,-10.2);c.bezierCurveTo(-2.7,-10.2,-.8,-8.8,0,-6.7);c.bezierCurveTo(.8,-8.8,2.7,-10.2,5.1,-10.2);c.bezierCurveTo(7.7,-10.2,10.5,-7.7,10.5,-3.8);c.bezierCurveTo(10.5,1.4,4,5.6,0,9);c.closePath();c.lineJoin='round';c.lineWidth=3.2;c.strokeStyle='#FFFFFF';c.stroke();c.fillStyle='#4F7BFF';c.fill();c.beginPath();c.ellipse(-5.2,-5.4,2.2,1.4,-.7,0,Math.PI*2);c.fillStyle='rgba(255,255,255,.75)';c.fill();c.restore()}
+  for(const p of couple)nameTag(c,p.x,p.y,p.name,false,false,true);
+  for(const b of bubbles){const o=b.who;if(o===player)bubble(c,player.x,player.y,b.text);else if(others.has(o.id)||couple.includes(o))bubble(c,o.x,o.y,b.text)}
 }
 function drawShore(c,t){const a=Math.max(0,camY-10),b=Math.min(1330,camY+viewH+10);if(b<=a)return;
   const g=c.createLinearGradient(400,0,W,0);g.addColorStop(0,'#A9E1EC');g.addColorStop(1,'#62B6D6');c.fillStyle=g;
@@ -976,7 +978,9 @@ function crowdAt(x,y,self){let n=0;const chk=(qx,qy)=>{const d=((x-qx)/SEP_X)**2
   for(const o of others.values()){if(o===self)continue;chk(o.tx!=null&&!o.path.length?o.x:(o.tx??o.x),o.tx!=null&&!o.path.length?o.y:(o.ty??o.y))}
   for(const c of couple)chk(c.x,c.y);if(self!==player&&inVillage)chk(player.x,player.y);return n}
 /* keep the space right in front of the couple clear so nobody hides them */
-const CZ={x0:184,x1:296,y0:436,y1:528};const inCZ=(x,y)=>x>CZ.x0&&x<CZ.x1&&y>CZ.y0&&y<CZ.y1;
+/* spots nobody may stand in: in front of / behind the couple, and in front of the guestbook board */
+const CZS=[{x0:184,x1:296,y0:372,y1:528,ex:'lrd'},{x0:34,x1:140,y0:318,y1:436,ex:'rd'}];
+const czAt=(x,y)=>CZS.find(z=>x>z.x0&&x<z.x1&&y>z.y0&&y<z.y1);const inCZ=(x,y)=>!!czAt(x,y);
 function freeSpot(p,self){const t=tierOf(p.y);if(!inCZ(p.x,p.y)&&crowdAt(p.x,p.y,self)===0)return p;let best=p,bv=inCZ(p.x,p.y)?1e9:crowdAt(p.x,p.y,self);
   for(let ring=1;ring<=7;ring++)for(let k=0;k<ring*8;k++){const a=k/(ring*8)*Math.PI*2,q=clampTier({x:p.x+Math.cos(a)*ring*SEP_X*.55,y:p.y+Math.sin(a)*ring*SEP_Y*.55},t);
     if(blocked(q.x,q.y)||inCZ(q.x,q.y))continue;const v=crowdAt(q.x,q.y,self);if(v===0)return q;if(v<bv){bv=v;best=q}}return best}
