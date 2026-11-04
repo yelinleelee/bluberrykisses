@@ -1328,7 +1328,7 @@ $('#questBtn').addEventListener('click',()=>{if(inVillage)openQuestBook()});
 function canHost(){return isOwner||(!shared&&!(window.BK&&BK.enabled))}
 function fmtTime(t){if(!t)return'';const d=new Date(t);return`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`}
 let recOn=false,recTimer=null,recStart=0,recCount=0,localSnaps=[],wakeLock=null;
-function snapNow(){const g=[...others.values()].filter(o=>!o.demo).map(o=>({i:o.id,n:o.name,x:Math.round(o.tx??o.x),y:Math.round(o.ty??o.y),l:o.look,m:o.msg&&!hiddenMsgs.has(o.id)?o.msg:'',c:o.cake?1:0}));
+function snapNow(){const g=[...(savedOthers||others).values()].filter(o=>!o.demo).map(o=>({i:o.id,n:o.name,x:Math.round(o.tx??o.x),y:Math.round(o.ty??o.y),l:o.look,m:o.msg&&!hiddenMsgs.has(o.id)?o.msg:'',c:o.cake?1:0}));
   if(me&&inVillage)g.push({i:shared?uid:'me',n:me.name,x:Math.round(player.x),y:Math.round(player.y),l:me.look,m:me.msg||'',c:me.cake?1:0});return{at:Date.now(),g}}
 async function recTick(){const s=snapNow();recCount++;if(shared&&isOwner){try{await db.collection('replay').doc(String(s.at)).set(s)}catch(e){console.warn('rec',e&&e.code)}}else localSnaps.push(s);renderHost()}
 async function startRec(fromStore){if(recOn)return;recOn=true;recStart=Date.now();recTick();recTimer=setInterval(recTick,60000);
