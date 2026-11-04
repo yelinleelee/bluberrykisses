@@ -243,6 +243,7 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .chk{display:flex;align-items:center;gap:8px;font-size:22px}.chk input{width:20px;height:20px;accent-color:var(--berry)}
 .draw-btns{display:flex;gap:8px;flex-wrap:wrap}
 #hostSearch{border-radius:10px}
+.pill-btn.soft.danger{color:#D23C5A}
 .gb-edit{flex:none;width:38px;height:38px;border:none;border-radius:12px;background:var(--paper);padding:7px;box-shadow:0 2px 0 var(--line)}.gb-edit svg{display:block;width:100%;height:100%}
 .row .time{font-size:18px;color:var(--ink-soft);font-variant-numeric:tabular-nums;white-space:nowrap}
 .row.hidden-msg{opacity:.45}
@@ -428,6 +429,11 @@ body,button,input,textarea{line-height:1.05}
       <div class="draw-btns"><button class="pill-btn" id="recToggle">기록 시작</button><button class="pill-btn soft" id="replayBtn">타임랩스 재생</button></div>
       <p class="note">이 기기에서 호스트 화면이 켜져 있는 동안 1분마다 마을 모습을 저장해요. 노트북을 충전기에 꽂고 화면이 꺼지지 않게 해주세요. 4시간 기록은 약 3분 영상으로 재생돼요.</p></section>
     <section class="host-sec" id="hostJoinSec"><h3>하객으로도 들어가기</h3><p class="note">캐릭터를 만들어 마을을 같이 돌아다닐 수 있어요. 톱니바퀴는 계속 보여요.</p><div class="draw-btns"><button class="pill-btn soft" id="hostJoin">캐릭터 만들어 입장하기</button></div></section>
+    <section class="host-sec"><h3>캐릭터 관리 <span id="hostCharCount"></span></h3>
+      <input type="text" id="charSearch" placeholder="이름으로 찾기" aria-label="캐릭터 이름 검색" autocomplete="off">
+      <ul class="list" id="hostChars"></ul>
+      <div class="draw-btns" style="margin-top:10px"><button class="pill-btn soft" id="delTests">테스트 캐릭터 모두 지우기</button><button class="pill-btn soft danger" id="delAll">전부 리셋하기</button></div>
+      <p class="note">지운 캐릭터는 모든 화면에서 바로 사라지고, 그 사람의 방명록·퀘스트·응모도 같이 지워져요. 지워진 사람이 다시 들어오면 처음부터 새로 만들어요. 전부 리셋하기는 캐릭터와 당첨 기록, 타임랩스 기록까지 모두 지워요. 되돌릴 수 없어서 두 번 눌러야 실행돼요.</p></section>
     <section class="host-sec"><h3>응모자 <span id="hostEntCount"></span></h3><input type="text" id="hostSearch" placeholder="이름으로 찾기" aria-label="응모자 이름 검색" autocomplete="off"><ul class="list" id="hostEntrants"></ul></section>
   </div>
 </section>
@@ -840,6 +846,10 @@ function subscribe(){
     {const M=savedOthers||others;for(const [id,o] of M)if(!o.demo&&!seen.has(id))M.delete(id)}
     if(!replay){const real=[...others.values()].filter(o=>!o.demo).length;if(real>=3)clearDemo()}
     refreshPanels()},e=>console.warn('guests',e&&e.code));
+  db.doc('event/purge').onSnapshot(s=>{if(!s.exists)return;const v=s.data()||{};const ids=new Set(Array.isArray(v.ids)?v.ids.map(String):[]);
+    const M=savedOthers||others;if(v.all){for(const [id,o] of M)if(!o.demo)M.delete(id)}else for(const id of ids)M.delete(id);refreshPanels();if(hostOpen)renderHost();
+    let myAt=0;try{myAt=+localStorage.getItem('bk-me-at')||0}catch(e){}
+    if((v.all||ids.has(String(uid)))&&+v.at>myAt&&(me||ownExists)&&!isOwner){try{localStorage.removeItem(LS);localStorage.removeItem('bk-me-at')}catch(e){}ownExists=false;me=null;toast('호스트가 마을을 새로 정리했어요');setTimeout(()=>location.reload(),1400)}},e=>console.warn('purge',e&&e.code));
   db.doc('event/draw').onSnapshot(s=>{if(!s.exists)return;const v=s.data();const prev=lastDraw;lastDraw=v;
     if(prev&&prev.at===v.at)return;if(v.cancelled||v.reset){if(!$('#drawOv').hidden&&!isOwner){closeDraw();toast('추첨이 취소됐어요')}refreshPanels();return}if(v.at>bootAt-5000&&(!prev||v.at>prev.at))showDraw(v);refreshPanels()},e=>console.warn('draw',e&&e.code));
   db.doc('event/recording').onSnapshot(s=>{const v=s.exists?s.data():null;if(isOwner&&v&&v.on&&!recOn)startRec(true)},e=>console.warn('rec',e&&e.code));
@@ -849,7 +859,7 @@ function upsertOther(id,v){if(replay&&savedOthers&&!inRedirect){const keep=other
   if(!o){o={id,x:p.x,y:p.y,dir:'down',phase:0,moving:false,path:[],seed:Math.random()*9};others.set(id,o)}
   else if(Math.hypot(o.tx-p.x,o.ty-p.y)>2){o.path=route(o,p)}
   {const ch=v&&v.chat;if(ch&&typeof ch.t==='string'&&+ch.at>(o.chatAt||0)){const fresh=!o.chatAt?Date.now()-ch.at<15000:true;o.chatAt=+ch.at;if(fresh&&!replay){bubbles=bubbles.filter(b=>b.who!==o);bubbles.push({who:o,text:ch.t.slice(0,30),until:performance.now()+5000,chat:true})}}}
-  Object.assign(o,{name:n.name,look:n.look,msg:n.msg,stamps:n.stamps,cake:n.cake,enteredAt:n.enteredAt,entered:n.entered,tx:p.x,ty:p.y,updatedAt:+v.updatedAt||0,demo:false})}
+  o.bot=!!(v&&v.bot);Object.assign(o,{name:n.name,look:n.look,msg:n.msg,stamps:n.stamps,cake:n.cake,enteredAt:n.enteredAt,entered:n.entered,tx:p.x,ty:p.y,updatedAt:+v.updatedAt||0,demo:false})}
 
 /* ---------- demo guests (only while the village is nearly empty) ---------- */
 let demoOn=false;
@@ -1364,10 +1374,38 @@ $('#hostDrawTest').addEventListener('click',()=>runDraw(drawN,true,true));
 $('#hostSearch').addEventListener('input',()=>renderHost());
 async function toggleHidden(id){const next=new Set(hiddenMsgs);next.has(id)?next.delete(id):next.add(id);
   if(shared&&isOwner){try{await db.doc('event/moderation').set({hidden:[...next],updatedAt:Date.now()})}catch(e){toast('저장하지 못했어요. 다시 눌러주세요');return}}else{hiddenMsgs=next;renderHost()}}
+const isTestChar=o=>o.bot||/^테스트\d*$/.test(String(o.name||''));
+function twoTap(btn,label,confirmLabel,fn){let armed=0;const L=()=>typeof label==='function'?label():label;btn.textContent=L();btn._relabel=()=>{if(!armed)btn.textContent=L()};btn.onclick=e=>{e.stopPropagation();if(Date.now()-armed<4000){armed=0;btn.textContent=L();fn();return}armed=Date.now();btn.textContent=confirmLabel;setTimeout(()=>{if(armed&&Date.now()-armed>=4000){armed=0;btn.textContent=L()}},4100)}}
+async function purgeChars(ids,all){if(!(shared&&isOwner)){for(const id of ids)others.delete(id);if(all)others.clear();renderHost();return}
+  let fail=0;const list=[...ids];for(let i=0;i<list.length;i+=10)await Promise.all(list.slice(i,i+10).map(id=>db.doc('guests/'+id).delete().catch(()=>{fail++})));
+  try{await db.doc('event/purge').set({at:Date.now(),all:!!all,ids:all?[]:list.slice(0,400)})}catch(e){fail++}
+  for(const id of list)others.delete(id);renderHost();return fail}
+async function deleteOne(o){const f=await purgeChars([o.id],false);toast(f?'지우지 못했어요. 다시 눌러주세요':`${o.name} 캐릭터를 지웠어요`)}
+async function deleteTests(){const ids=[...others.values()].filter(o=>!o.demo&&isTestChar(o)).map(o=>o.id);if(!ids.length){toast('테스트 캐릭터가 없어요');return}const f=await purgeChars(ids,false);toast(f?'일부를 지우지 못했어요. 다시 눌러주세요':`테스트 캐릭터 ${ids.length}명을 지웠어요`)}
+async function resetAll(){let ids=[...others.values()].filter(o=>!o.demo).map(o=>o.id);
+  if(shared&&isOwner){try{const q=await db.collection('guests').get();ids=[...new Set([...ids,...q.docs.map(d=>d.id)])]}catch(e){}}
+  const f=await purgeChars(ids,true);
+  if(shared&&isOwner){try{await db.doc('event/draw').set({winners:[],reset:true,at:Date.now(),history:[]})}catch(e){}
+    try{const q=await db.collection('replay').get();for(let i=0;i<q.docs.length;i+=10)await Promise.all(q.docs.slice(i,i+10).map(d=>db.doc('replay/'+d.id).delete().catch(()=>{})))}catch(e){}}
+  else{lastDraw=null;localSnaps=[]}
+  if(me&&!spectating){try{localStorage.removeItem(LS);localStorage.removeItem('bk-me-at')}catch(e){}}
+  toast(f?'일부를 지우지 못했어요. 다시 눌러주세요':'마을을 처음 상태로 리셋했어요');renderHost()}
+let charSig='';const testCount=()=>[...others.values()].filter(o=>!o.demo&&isTestChar(o)).length;
+function renderChars(){const ul=$('#hostChars');if(!ul)return;const all=[...others.values()].filter(o=>!o.demo).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  $('#hostCharCount').textContent=`${all.length}명`;const qv=$('#charSearch').value.trim();$('#delTests')._relabel&&$('#delTests')._relabel();
+  const sig=qv+'|'+all.map(o=>o.id+':'+o.name+':'+(o.entered?1:0)).join(',');if(sig===charSig)return;charSig=sig;ul.replaceChildren();const list=qv?all.filter(o=>String(o.name).includes(qv)):all;
+  if(!list.length){const e=document.createElement('li');e.className='empty';e.textContent=all.length?'찾는 이름이 없어요':'아직 캐릭터가 없어요';ul.appendChild(e)}
+  for(const o of list.slice(0,80)){const b=document.createElement('button');b.className='mini-btn';twoTap(b,'지우기','한 번 더',()=>deleteOne(o));
+    ul.appendChild(hostRow({name:o.name,sub:[isTestChar(o)?'테스트':'',o.entered?'응모함':o.msg?'방명록 씀':''].filter(Boolean).join(' · '),look:o.look},b))}
+  if(list.length>80){const e=document.createElement('li');e.className='empty';e.textContent=`그 외 ${list.length-80}명 · 이름으로 찾아주세요`;ul.appendChild(e)}
+}
+twoTap($('#delTests'),()=>`테스트 캐릭터 모두 지우기 (${testCount()})`,'정말 지울까요? 한 번 더',deleteTests);
+twoTap($('#delAll'),'전부 리셋하기','정말 전부 지울까요? 한 번 더',resetAll);
+$('#charSearch').addEventListener('input',()=>renderChars());
 function hostRow(o,right){const li=document.createElement('li');li.className='row';li.appendChild(avatar(o.look||randomLook()));const tx=document.createElement('div');tx.className='txt';
   const nm=document.createElement('div');nm.className='nm';nm.textContent=o.name;tx.appendChild(nm);if(o.sub){const ms=document.createElement('div');ms.className='ms';ms.textContent=o.sub;tx.appendChild(ms)}
   li.appendChild(tx);if(right)li.appendChild(right);return li}
-function renderHost(){if(!hostOpen)return;$('#hostJoinSec').hidden=!spectating;{const rs=$('#recStatus');rs.classList.toggle('on',recOn);rs.querySelector('span').textContent=recOn?`기록 중 · ${fmtTime(recStart)}부터 · ${recCount}장`:(shared?'기록 꺼짐':`기록 꺼짐 · 저장된 기록 ${localSnaps.length}장`);$('#recToggle').textContent=recOn?'기록 멈추기':'기록 시작'}const gl=guestList(),ents=drawCandidates().sort((a,b)=>(a.enteredAt||0)-(b.enteredAt||0));
+function renderHost(){if(!hostOpen)return;renderChars();$('#hostJoinSec').hidden=!spectating;{const rs=$('#recStatus');rs.classList.toggle('on',recOn);rs.querySelector('span').textContent=recOn?`기록 중 · ${fmtTime(recStart)}부터 · ${recCount}장`:(shared?'기록 꺼짐':`기록 꺼짐 · 저장된 기록 ${localSnaps.length}장`);$('#recToggle').textContent=recOn?'기록 멈추기':'기록 시작'}const gl=guestList(),ents=drawCandidates().sort((a,b)=>(a.enteredAt||0)-(b.enteredAt||0));
   const stats=[[gl.length,'입장 하객'],[ents.length,'응모자'],[slicesTaken(),'케이크 조각'],[gl.filter(o=>o.msg).length,'방명록']];
   const st=$('#hostStats');st.replaceChildren();for(const [n,l] of stats){const d=document.createElement('div');const b=document.createElement('b');b.textContent=n;const sp=document.createElement('span');sp.textContent=l;d.append(b,sp);st.appendChild(d)}
   const hq=$('#hostQuests');if(hq){hq.replaceChildren();for(const q of QUESTS){const n=gl.filter(o=>o.stamps&&o.stamps[q.k]).length;const r=document.createElement('div');r.className='qbar';
@@ -1431,7 +1469,7 @@ $('#crRandom').addEventListener('click',()=>{crLook=randomLook();renderOpts()});
 $('#crDone').addEventListener('click',()=>{const nm=$('#nameIn').value.trim().slice(0,10);const f=$('#nameField');
   if(!nm){f.classList.remove('err');void f.offsetWidth;f.classList.add('err');$('#nameIn').focus();return}
   $('#creator').hidden=true;
-  if(crFirst||!me){let sp=Math.random()<.4?clampTier({x:240+R(-150,150),y:R(340,470)},1):clampTier({x:R(80,400),y:R(780,1160)},3);if(blocked(sp.x,sp.y))sp={x:sp.x,y:sp.y<700?472:sp.y+70};sp=freeSpot(sp,player);me={name:nm,look:crLook,x:sp.x,y:sp.y,msg:'',stamps:{book:false,film:false,cheers:false},cake:false,entered:false,enteredAt:0};
+  if(crFirst||!me){try{localStorage.setItem('bk-me-at',String(Date.now()))}catch(e){}let sp=Math.random()<.4?clampTier({x:240+R(-150,150),y:R(340,470)},1):clampTier({x:R(80,400),y:R(780,1160)},3);if(blocked(sp.x,sp.y))sp={x:sp.x,y:sp.y<700?472:sp.y+70};sp=freeSpot(sp,player);me={name:nm,look:crLook,x:sp.x,y:sp.y,msg:'',stamps:{book:false,film:false,cheers:false},cake:false,entered:false,enteredAt:0};
     enterVillage();toast('결혼 파티에 와주셔서 감사해요!')}
   else{me.name=nm;me.look=crLook;persist({name:nm,look:crLook,updatedAt:Date.now()});toast('새 모습으로 갈아입었어요')}
   refreshPanels()});
