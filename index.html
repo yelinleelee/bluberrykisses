@@ -286,6 +286,10 @@ button.polaroid{border:none;font:inherit;cursor:pointer;display:block;width:100%
 .rp-clock{font-family:var(--f-display);font-size:28px;color:var(--berry-dk);font-variant-numeric:tabular-nums;min-width:3.2em}
 .rp-track{flex:1;height:10px;border-radius:999px;background:var(--berry-soft);overflow:hidden}.rp-track b{display:block;height:100%;width:0;background:var(--berry);border-radius:inherit}
 .rp-btn{border:none;background:var(--berry-soft);color:var(--berry-dk);width:34px;height:34px;border-radius:10px;font-size:18px;line-height:1;display:grid;place-items:center}
+.rp-video{position:absolute;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font-size:22px;padding:8px 18px;pointer-events:auto}
+.vid-card{text-align:center;max-width:340px}
+.vid-track{height:12px;border-radius:999px;background:var(--berry-soft);overflow:hidden;margin:14px 0 6px}
+.vid-track b{display:block;height:100%;width:0;background:var(--berry);border-radius:999px}
 .rp-title{margin:0;font-family:var(--f-display);font-size:26px;color:#fff;text-shadow:0 2px 0 rgba(40,30,80,.5)}
 
 .host-login{display:flex;flex-direction:column;gap:10px;align-items:stretch;text-align:center}
@@ -380,6 +384,7 @@ body,button,input,textarea{line-height:1.05}
     <div class="replay-ui" id="replayUI" hidden>
       <div class="rp-bar"><span class="rp-clock" id="rpClock">--:--</span><i class="rp-track"><b id="rpFill"></b></i>
         <button class="rp-btn" id="rpPlay" aria-label="일시정지">❚❚</button><button class="rp-btn" id="rpRestart" aria-label="처음부터">↺</button><button class="rp-btn" id="rpClose" aria-label="재생 닫기">×</button></div>
+      <button class="pill-btn rp-video" id="rpVideo" type="button">영상으로 저장</button>
       <p class="rp-title">BluberryKisses 타임랩스</p>
     </div>
     <div class="hud-top">
@@ -431,7 +436,7 @@ body,button,input,textarea{line-height:1.05}
       <h4>당첨 기록</h4><ul class="list" id="hostWinners"></ul><div class="draw-btns" style="margin-top:10px"><button class="pill-btn soft" id="drawReset">전부 처음부터 다시하기</button></div></section>
     <section class="host-sec"><h3>타임랩스</h3>
       <div class="rec-status" id="recStatus"><i></i><span>기록 꺼짐</span></div>
-      <div class="draw-btns"><button class="pill-btn" id="recToggle">기록 시작</button><button class="pill-btn soft" id="replayBtn">타임랩스 재생</button></div>
+      <div class="draw-btns"><button class="pill-btn" id="recToggle">기록 시작</button><button class="pill-btn soft" id="replayBtn">타임랩스 재생</button><button class="pill-btn soft" id="replayVideoBtn">영상으로 저장</button></div>
       <p class="note">이 기기에서 호스트 화면이 켜져 있는 동안 1분마다 마을 모습을 저장해요. 노트북을 충전기에 꽂고 화면이 꺼지지 않게 해주세요. 4시간 기록은 약 3분 영상으로 재생돼요.</p></section>
     <section class="host-sec" id="hostJoinSec"><h3>하객으로도 들어가기</h3><p class="note">캐릭터를 만들어 마을을 같이 돌아다닐 수 있어요. 톱니바퀴는 계속 보여요.</p><div class="draw-btns"><button class="pill-btn soft" id="hostJoin">캐릭터 만들어 입장하기</button></div></section>
     <section class="host-sec"><h3>캐릭터 관리 <span id="hostCharCount"></span></h3>
@@ -466,6 +471,7 @@ body,button,input,textarea{line-height:1.05}
   </div>
 </div>
 
+<div class="ov" id="vidOv" hidden><div class="modal vid-card"><h2 id="vidTitle">타임랩스 영상 만드는 중</h2><div class="vid-track"><b id="vidFill"></b></div><p class="note" id="vidNote">처음부터 끝까지 재생하면서 영상으로 녹화하고 있어요. 다 될 때까지 이 화면을 켜두세요.</p><div class="draw-btns center" id="vidBtns"></div></div></div>
 <div id="liveBadge" hidden><i></i><span>LIVE</span></div>
 <div class="ov" id="drawOv" hidden>
   <div class="gum-wrap">
@@ -904,7 +910,7 @@ function stepMover(o,dt,speed){if(!o.path.length){o.moving=false;return false}
   o.moving=true;o.phase+=dt*13;if(!o.path.length){o.moving=false;return true}return false}
 
 let lastT=0;
-function loop(ts){const t=ts/1000,dt=Math.min(.05,t-lastT||.016);lastT=t;update(dt,t,ts);render(t);if(!$('#creator').hidden)drawPreview(t);requestAnimationFrame(loop)}
+function loop(ts){const t=ts/1000,dt=Math.min(.05,t-lastT||.016);lastT=t;update(dt,t,ts);render(t);if(vidRec)videoFrame(t);if(!$('#creator').hidden)drawPreview(t);requestAnimationFrame(loop)}
 function update(dt,t,ts){
   if(replay){stepReplay(dt);camY=clampCam(camY);{const tx=clampCamX(W/2-viewW/2);camX+=(tx-camX)*Math.min(1,dt*4)}const now=performance.now();bubbles=bubbles.filter(b=>b.until>now);return}
   if(inVillage){const arrived=stepMover(player,dt,150);
@@ -1379,7 +1385,36 @@ async function openReplay(){const snaps=await loadSnaps();if(snaps.length<2){toa
   hostOpen=false;$('#host').hidden=true;const t0=snaps[0].at,t1=snaps[snaps.length-1].at;
   replay={snaps,t0,t1,dur:Math.min(180,Math.max(15,(t1-t0)/1000/80))*1000,el:0,playing:true,seen:new Map()};
   savedOthers=others;others=new Map();inVillage=false;bubbles=[];$('#stage').classList.add('replaying');$('#replayUI').hidden=false;resize();$('#rpPlay').textContent='❚❚';updateLive()}
-function closeReplay(){if(!replay)return;replay=null;setTimeout(updateLive,0);resize();others=savedOthers;savedOthers=null;bubbles=[];inVillage=!!me;$('#stage').classList.remove('replaying');$('#replayUI').hidden=true;openHost()}
+function closeReplay(){if(!replay)return;if(vidRec){vidRec.cancel=true;try{vidRec.mr.stop()}catch(e){}}replay=null;setTimeout(updateLive,0);resize();others=savedOthers;savedOthers=null;bubbles=[];inVillage=!!me;$('#stage').classList.remove('replaying');$('#replayUI').hidden=true;openHost()}
+/* ---------- timelapse -> video file ---------- */
+let vidRec=null;
+function pickVideoType(){const L=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];for(const t of L)if(window.MediaRecorder&&MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t))return t;return ''}
+function startVideoExport(){if(!replay||vidRec)return;if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){toast('이 브라우저에서는 영상 저장이 안 돼요. 노트북 크롬에서 해주세요');return}
+  const type=pickVideoType();if(!type){toast('이 브라우저에서는 영상 저장이 안 돼요. 노트북 크롬에서 해주세요');return}
+  const OW=720,OH=1280,cv=document.createElement('canvas');cv.width=OW;cv.height=OH;
+  const stream=cv.captureStream(30);const chunks=[];let mr;try{mr=new MediaRecorder(stream,{mimeType:type,videoBitsPerSecond:6000000})}catch(e){toast('영상 녹화를 시작하지 못했어요');return}
+  mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data)};
+  vidRec={cv,mr,chunks,type,done:false};replay.el=0;replay.seen.clear();replay.playing=true;bubbles=[];$('#rpPlay').textContent='❚❚';
+  $('#vidOv').hidden=false;$('#vidTitle').textContent='타임랩스 영상 만드는 중';$('#vidNote').textContent='처음부터 끝까지 재생하면서 영상으로 녹화하고 있어요. 다 될 때까지 이 화면을 켜두세요.';$('#vidFill').style.width='0';
+  const bt=$('#vidBtns');bt.replaceChildren();const cancel=document.createElement('button');cancel.className='pill-btn soft';cancel.textContent='그만두기';cancel.addEventListener('click',()=>{vidRec.cancel=true;try{mr.stop()}catch(e){}});bt.appendChild(cancel);
+  mr.onstop=()=>{const v=vidRec;vidRec=null;if(v.cancel){$('#vidOv').hidden=true;toast('영상 만들기를 그만뒀어요');return}
+    const ext=v.type.includes('mp4')?'mp4':'webm';const blob=new Blob(v.chunks,{type:v.type.split(';')[0]});
+    $('#vidTitle').textContent='영상이 완성됐어요!';$('#vidNote').textContent=`${Math.round(blob.size/1024/1024*10)/10}MB · 아래 버튼을 눌러 저장하세요`;$('#vidFill').style.width='100%';
+    bt.replaceChildren();const sv=document.createElement('button');sv.className='pill-btn';sv.textContent='영상 저장하기';
+    sv.addEventListener('click',async()=>{try{const dl=window.claude&&typeof window.claude.use==='function'?await window.claude.use('downloads'):null;if(!dl){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=`bluberrykisses-timelapse.${ext}`;document.body.appendChild(a);a.click();a.remove();return}await dl.save({filename:`bluberrykisses-timelapse.${ext}`,data:blob});toast('영상을 저장했어요')}catch(e){if(!(e&&e.code==='declined'))toast('저장하지 못했어요. 다시 눌러주세요')}});
+    const cl=document.createElement('button');cl.className='pill-btn soft';cl.textContent='닫기';cl.addEventListener('click',()=>$('#vidOv').hidden=true);bt.append(cl,sv)};
+  mr.start(1000)}
+function videoFrame(t){const v=vidRec;if(!v||!replay)return;const r=replay,p=r.el/r.dur,cv=v.cv,K=cv.width/W,VH=cv.height/K;
+  const keep={dpr,scale,camX,camY,viewH,viewW};renderCtx=cv.getContext('2d');
+  try{dpr=1;scale=K;camX=0;viewW=W;viewH=VH;camY=Math.max(0,Math.min(H-VH,(H-VH)*(1-Math.cos(p*Math.PI*2))/2));render(t)}catch(e){}
+  ({dpr,scale,camX,camY,viewH,viewW}=keep);renderCtx=null;
+  const q=cv.getContext('2d');q.setTransform(1,0,0,1,0,0);const T=new Date(r.t0+p*(r.t1-r.t0));
+  q.fillStyle='rgba(30,22,60,.55)';rr(q,24,30,cv.width-48,74,24);q.fill();q.fillStyle='#FFFFFF';q.textAlign='left';q.textBaseline='middle';q.font='700 40px '+UI_FONT;q.fillText('BluberryKisses 웨딩마을',50,68);
+  q.textAlign='right';q.fillText(`${T.getHours()}:${String(T.getMinutes()).padStart(2,'0')}`,cv.width-50,68);
+  $('#vidFill').style.width=Math.round(p*100)+'%';
+  if(r.el>=r.dur&&!v.done){v.done=true;setTimeout(()=>{try{v.mr.stop()}catch(e){}},600)}}
+$('#rpVideo').addEventListener('click',startVideoExport);
+$('#replayVideoBtn').addEventListener('click',async()=>{await openReplay();if(replay)startVideoExport()});
 function stepReplay(dt){const r=replay;if(r.playing){r.el=Math.min(r.dur,r.el+dt*1000);if(r.el>=r.dur){r.playing=false;$('#rpPlay').textContent='▶'}}
   const T=r.t0+(r.el/r.dur)*(r.t1-r.t0);let k=0;while(k<r.snaps.length-2&&r.snaps[k+1].at<=T)k++;
   const A=r.snaps[k],B=r.snaps[k+1],f=Math.max(0,Math.min(1,(T-A.at)/Math.max(1,B.at-A.at)));const ia=new Map(A.g.map(g=>[g.i,g])),ib=new Map(B.g.map(g=>[g.i,g]));
